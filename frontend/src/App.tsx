@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { LoginPage } from "./pages/Login";
 import { StoreSelectionPage } from "./pages/StoreSelection";
 import { PosTerminal } from "./pages/PosTerminal";
@@ -6,13 +6,55 @@ import { OwnerDashboard } from "./pages/OwnerDashboard";
 import { OwnerGlobalDashboard } from "./pages/OwnerGlobalDashboard";
 import type { ClientAccount, StoreItem } from "./types";
 
+const ACCOUNT_KEY = "visto_client_account";
+const STORE_KEY = "visto_selected_store";
+
 export default function App() {
-  const [currentAccount, setCurrentAccount] = useState<ClientAccount | null>(null);
-  const [selectedStore, setSelectedStore] = useState<StoreItem | null>(null);
+  // Initialize state directly from localStorage so refresh keeps the user logged in
+  const [currentAccount, setCurrentAccount] = useState<ClientAccount | null>(() => {
+    const saved = localStorage.getItem(ACCOUNT_KEY);
+    if (!saved) return null;
+    try {
+      return JSON.parse(saved);
+    } catch {
+      return null;
+    }
+  });
+
+  const [selectedStore, setSelectedStore] = useState<StoreItem | null>(() => {
+    const saved = localStorage.getItem(STORE_KEY);
+    if (!saved) return null;
+    try {
+      return JSON.parse(saved);
+    } catch {
+      return null;
+    }
+  });
+
   const [isStoreOwnerView, setIsStoreOwnerView] = useState<boolean>(false);
   const [isGlobalOwnerView, setIsGlobalOwnerView] = useState<boolean>(false);
 
+  // Sync state changes to localStorage
+  const handleLoginSuccess = (account: ClientAccount) => {
+    localStorage.setItem(ACCOUNT_KEY, JSON.stringify(account));
+    setCurrentAccount(account);
+  };
+
+  const handleSelectStore = (store: StoreItem) => {
+    localStorage.setItem(STORE_KEY, JSON.stringify(store));
+    setSelectedStore(store);
+  };
+
+  const handleSwitchStore = () => {
+    localStorage.removeItem(STORE_KEY);
+    setSelectedStore(null);
+    setIsStoreOwnerView(false);
+    setIsGlobalOwnerView(false);
+  };
+
   const handleLogout = () => {
+    localStorage.removeItem(ACCOUNT_KEY);
+    localStorage.removeItem(STORE_KEY);
     setSelectedStore(null);
     setCurrentAccount(null);
     setIsStoreOwnerView(false);
@@ -27,7 +69,7 @@ export default function App() {
         currentStore={selectedStore}
         onBack={() => setIsGlobalOwnerView(false)}
         onSelectStore={(store) => {
-          setSelectedStore(store);
+          handleSelectStore(store);
           setIsGlobalOwnerView(false);
           setIsStoreOwnerView(false);
         }}
@@ -54,10 +96,7 @@ export default function App() {
         account={currentAccount}
         store={selectedStore}
         onLogout={handleLogout}
-        onSwitchStore={() => {
-          setSelectedStore(null);
-          setIsStoreOwnerView(false);
-        }}
+        onSwitchStore={handleSwitchStore}
         onOpenOwnerDashboard={() => setIsStoreOwnerView(true)}
       />
     );
@@ -69,13 +108,13 @@ export default function App() {
       <div className="relative">
         <button
           onClick={handleLogout}
-          className="absolute top-6 right-6 text-sm px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 text-gray-700 transition"
+          className="absolute top-6 right-6 text-sm px-4 py-2 rounded bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition z-10"
         >
           Log Out
         </button>
         <StoreSelectionPage
           account={currentAccount}
-          onSelectStore={(store) => setSelectedStore(store)}
+          onSelectStore={handleSelectStore}
           onOpenGlobalDashboard={() => setIsGlobalOwnerView(true)}
         />
       </div>
@@ -83,5 +122,5 @@ export default function App() {
   }
 
   // Step 1: Login
-  return <LoginPage onLoginSuccess={(account) => setCurrentAccount(account)} />;
+  return <LoginPage onLoginSuccess={handleLoginSuccess} />;
 }
