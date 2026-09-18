@@ -36,10 +36,12 @@ export const StoreSelectionPage: React.FC<StoreSelectionProps> = ({
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 relative">
-      <div className="w-full max-w-lg rounded-xl bg-white p-8 shadow-md border border-gray-100">
+    <div className="flex min-h-screen items-center justify-center bg-neutral-950 px-4 select-none relative">
+      <div className="w-full max-w-lg rounded-2xl bg-neutral-900 p-8 border border-neutral-800 shadow-2xl">
         <div className="flex items-center justify-between mb-2">
-          <h2 className="text-2xl font-bold text-gray-900">Select Store</h2>
+          <h2 className="text-2xl font-bold text-white tracking-wide">
+            Select Store
+          </h2>
           {stores.length > 1 && (
             <button
               onClick={() => {
@@ -47,39 +49,39 @@ export const StoreSelectionPage: React.FC<StoreSelectionProps> = ({
                 setEnteredPin("");
                 setShowPinModal(true);
               }}
-              className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition"
+              className="text-xs font-medium px-3 py-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition"
             >
               Global Dashboard &rarr;
             </button>
           )}
         </div>
 
-        <p className="text-sm text-gray-500 mb-6">
-          Logged in as <span className="font-semibold">{account.name}</span>
+        <p className="text-xs text-neutral-400 mb-6">
+          Logged in as <span className="text-neutral-200 font-semibold">{account.name}</span>
         </p>
 
         {stores.length === 0 ? (
-          <p className="text-center text-sm text-gray-500 py-4">
+          <div className="p-6 text-center bg-neutral-950 border border-neutral-800 rounded-xl text-xs text-neutral-500">
             No active stores found for this account.
-          </p>
+          </div>
         ) : (
           <div className="space-y-3">
             {stores.map((store) => (
               <button
                 key={store.id}
                 onClick={() => onSelectStore(store)}
-                className="w-full flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:border-indigo-500 hover:bg-indigo-50 transition text-left group"
+                className="w-full flex items-center justify-between p-4 rounded-xl border border-neutral-800 bg-neutral-950/60 hover:bg-neutral-800 hover:border-neutral-700 transition text-left group"
               >
                 <div>
-                  <h3 className="font-semibold text-gray-800 group-hover:text-indigo-600">
+                  <h3 className="font-semibold text-neutral-200 group-hover:text-emerald-400 transition">
                     {store.name || store.id}
                   </h3>
                   {store.location && (
-                    <p className="text-xs text-gray-500 mt-0.5">{store.location}</p>
+                    <p className="text-xs text-neutral-400 mt-0.5">{store.location}</p>
                   )}
                 </div>
-                <span className="text-sm font-medium text-indigo-600 opacity-0 group-hover:opacity-100 transition">
-                  Select &rarr;
+                <span className="text-xs font-semibold text-emerald-400 opacity-0 group-hover:opacity-100 transition translate-x-[-4px] group-hover:translate-x-0">
+                  Launch &rarr;
                 </span>
               </button>
             ))}
@@ -90,7 +92,7 @@ export const StoreSelectionPage: React.FC<StoreSelectionProps> = ({
       {/* PIN Verification Modal */}
       {showPinModal && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-xl max-w-sm w-full p-6 shadow-xl text-white">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-xl max-w-sm w-full p-6 shadow-2xl text-white">
             <h3 className="text-lg font-semibold text-center mb-1">
               Owner Verification
             </h3>
