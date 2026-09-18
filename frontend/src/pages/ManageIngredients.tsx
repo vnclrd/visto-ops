@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import type { ClientAccount, StoreItem, IngredientRecord } from "../types";
-import { fetchIngredients } from "../services/ingredientApi";
+import { fetchIngredients, manageIngredient } from "../services/ingredientApi";
 
 interface ManageIngredientsProps {
   account: ClientAccount;
@@ -28,13 +28,16 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
   const [newPackageSize, setNewPackageSize] = useState("");
   const [newInitialPacks, setNewInitialPacks] = useState("1");
   const [newReorder, setNewReorder] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   // Edit / Price Adjustment Modal State
   const [editingItem, setEditingItem] = useState<IngredientRecord | null>(null);
   const [editPackagePrice, setEditPackagePrice] = useState("");
   const [editPackageSize, setEditPackageSize] = useState("");
+  const [isSavingEdit, setIsSavingEdit] = useState<boolean>(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
-  // Fetch real data on mount or when store changes
   const loadData = async () => {
     setIsLoading(true);
     setFetchError(null);
@@ -52,76 +55,108 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
     loadData();
   }, [account.id, store.id]);
 
-  // Live calculation preview in registration form
+  // Live calculation preview
   const parsedPrice = parseFloat(newPackagePrice) || 0;
   const parsedSize = parseFloat(newPackageSize) || 0;
   const previewCostPerUnit = parsedSize > 0 ? parsedPrice / parsedSize : 0;
 
-  const handleAddIngredient = (e: React.FormEvent) => {
+  const handleAddIngredient = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newName.trim() || parsedSize <= 0) return;
+    setFormError(null);
+
+    if (!newName.trim() || parsedSize <= 0) {
+      setFormError("Valid name and package size are required.");
+      return;
+    }
 
     const initialPacks = parseFloat(newInitialPacks) || 0;
-    const computedCostPerUnit = parsedPrice / parsedSize;
+    setIsSubmitting(true);
 
-    const newItem: IngredientRecord = {
-      id: `ing_${Date.now()}`,
-      name: newName.trim(),
-      category: newCategory,
-      unit: newUnit,
-      costPerUnit: computedCostPerUnit,
-      currentStock: initialPacks * parsedSize,
-      reorderLevel: parseFloat(newReorder) || 0,
-      packageSpecs: {
-        packagePrice: parsedPrice,
-        packageSize: parsedSize,
-      },
-      isActive: true,
-    };
+    try {
+      const created = await manageIngredient(account.id, store.id, "create", undefined, {
+        name: newName.trim(),
+        category: newCategory,
+        unit: newUnit,
+        currentStock: initialPacks * parsedSize,
+        reorderLevel: parseFloat(newReorder) || 0,
+        packageSpecs: {
+          packagePrice: parsedPrice,
+          packageSize: parsedSize,
+        },
+        isActive: true,
+      });
 
-    setIngredients((prev) => [newItem, ...prev]);
-    setNewName("");
-    setNewPackagePrice("");
-    setNewPackageSize("");
-    setNewInitialPacks("1");
-    setNewReorder("");
+      // Update state locally with the saved Firestore document
+      setIngredients((prev) => [created, ...prev]);
+
+      // Reset form
+      setNewName("");
+      setNewPackagePrice("");
+      setNewPackageSize("");
+      setNewInitialPacks("1");
+      setNewReorder("");
+    } catch (err: any) {
+      setFormError(err.message || "Failed to register ingredient");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const openPriceEditModal = (item: IngredientRecord) => {
     setEditingItem(item);
-    setEditPackagePrice(String(item.packageSpecs.packagePrice));
-    setEditPackageSize(String(item.packageSpecs.packageSize));
+    setEditError(null);
+    setEditPackagePrice(String(item.packageSpecs?.packagePrice ?? 0));
+    setEditPackageSize(String(item.packageSpecs?.packageSize ?? 0));
   };
 
-  const handleSavePriceChange = (e: React.FormEvent) => {
+  const handleSavePriceChange = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingItem) return;
 
     const price = parseFloat(editPackagePrice) || 0;
     const size = parseFloat(editPackageSize) || 0;
-    if (size <= 0) return;
+    if (size <= 0) {
+      setEditError("Package size must be greater than 0");
+      return;
+    }
 
-    const updatedCostPerUnit = price / size;
+    setIsSavingEdit(true);
+    setEditError(null);
 
-    setIngredients((prev) =>
-      prev.map((item) =>
-        item.id === editingItem.id
-          ? {
-              ...item,
-              packageSpecs: {
-                packagePrice: price,
-                packageSize: size,
-              },
-              costPerUnit: updatedCostPerUnit,
-            }
-          : item
-      )
-    );
+    try {
+      await manageIngredient(account.id, store.id, "update", editingItem.id, {
+        packageSpecs: {
+          packagePrice: price,
+          packageSize: size,
+        },
+      });
 
-    setEditingItem(null);
+      const updatedCostPerUnit = price / size;
+
+      // Update state locally
+      setIngredients((prev) =>
+        prev.map((item) =>
+          item.id === editingItem.id
+            ? {
+                ...item,
+                packageSpecs: {
+                  packagePrice: price,
+                  packageSize: size,
+                },
+                costPerUnit: updatedCostPerUnit,
+              }
+            : item
+        )
+      );
+
+      setEditingItem(null);
+    } catch (err: any) {
+      setEditError(err.message || "Failed to update pricing");
+    } finally {
+      setIsSavingEdit(false);
+    }
   };
 
-  // Derive categories dynamically from retrieved database items
   const uniqueCategories = Array.from(
     new Set(ingredients.map((item) => item.category).filter(Boolean))
   );
@@ -156,10 +191,16 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
         {/* Left Column: Intake Registration Form */}
         <div className="lg:col-span-1">
           <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 sticky top-20 shadow-xl">
-            <h2 className="text-lg font-bold text-white mb-1">Add Bulk Ingredient</h2>
+            <h2 className="text-lg font-bold text-white mb-1">Add Ingredient or Supply</h2>
             <p className="text-xs text-neutral-400 mb-5">
               Enter package purchasing details. The unit cost is computed automatically.
             </p>
+
+            {formError && (
+              <div className="mb-4 rounded-lg bg-rose-500/10 border border-rose-500/30 p-2.5 text-xs text-rose-400">
+                {formError}
+              </div>
+            )}
 
             <form onSubmit={handleAddIngredient} className="space-y-4">
               <div>
@@ -172,7 +213,7 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
                   placeholder="e.g. Arla Full Cream Milk"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  className="w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3.5 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3.5 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 transition"
                 />
               </div>
 
@@ -240,7 +281,7 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
                   </div>
                 </div>
 
-                {/* Auto Calculated Unit Price Badge */}
+                {/* Live Unit Price Badge */}
                 <div className="flex justify-between items-center pt-2 border-t border-neutral-800 text-xs">
                   <span className="text-neutral-400">Calculated Cost:</span>
                   <span className="font-semibold text-emerald-400">
@@ -278,9 +319,10 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
 
               <button
                 type="submit"
-                className="w-full mt-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 py-2.5 px-4 text-xs font-bold text-black uppercase tracking-wider transition"
+                disabled={isSubmitting}
+                className="w-full mt-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 py-2.5 px-4 text-xs font-bold text-black uppercase tracking-wider transition disabled:opacity-50"
               >
-                + Register Ingredient
+                {isSubmitting ? "Registering..." : "+ Register Ingredient"}
               </button>
             </form>
           </div>
@@ -332,7 +374,7 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
               <table className="w-full text-left text-xs">
                 <thead className="bg-neutral-950/80 border-b border-neutral-800 text-neutral-400 uppercase font-semibold">
                   <tr>
-                    <th className="px-5 py-3.5">Ingredient</th>
+                    <th className="px-5 py-3.5">Ingredient/Supply</th>
                     <th className="px-4 py-3.5">Package Specs</th>
                     <th className="px-4 py-3.5">Calculated Unit Cost</th>
                     <th className="px-4 py-3.5">Current Stock</th>
@@ -347,7 +389,8 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
                         <span className="text-[10px] text-neutral-500">{item.category}</span>
                       </td>
                       <td className="px-4 py-4 text-neutral-300">
-                        ₱{item.packageSpecs.packagePrice.toFixed(2)} / {item.packageSpecs.packageSize} {item.unit}
+                        ₱{(item.packageSpecs?.packagePrice ?? 0).toFixed(2)} /{" "}
+                        {item.packageSpecs?.packageSize ?? 0} {item.unit}
                       </td>
                       <td className="px-4 py-4 font-medium text-emerald-400">
                         ₱{item.costPerUnit.toFixed(4)} / {item.unit}
@@ -386,6 +429,12 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
             <p className="text-xs text-neutral-400 mb-4">
               Update {editingItem.name} supplier pricing.
             </p>
+
+            {editError && (
+              <div className="mb-4 rounded-lg bg-rose-500/10 border border-rose-500/30 p-2.5 text-xs text-rose-400">
+                {editError}
+              </div>
+            )}
 
             <form onSubmit={handleSavePriceChange} className="space-y-4">
               <div>
@@ -435,9 +484,10 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="w-1/2 py-2 text-xs bg-emerald-500 hover:bg-emerald-400 rounded-lg text-black font-semibold transition"
+                  disabled={isSavingEdit}
+                  className="w-1/2 py-2 text-xs bg-emerald-500 hover:bg-emerald-400 rounded-lg text-black font-semibold transition disabled:opacity-50"
                 >
-                  Save Changes
+                  {isSavingEdit ? "Saving..." : "Save Changes"}
                 </button>
               </div>
             </form>

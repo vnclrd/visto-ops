@@ -123,7 +123,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                     📦
                   </div>
                   <h3 className="text-lg font-semibold text-neutral-100 group-hover:text-emerald-400 transition">
-                    Update Ingredients
+                    Update Ingredients & Supplies
                   </h3>
                   <p className="text-xs text-neutral-400 mt-1">
                     Adjust current raw stock levels, set units, and manage reorder alerts.
