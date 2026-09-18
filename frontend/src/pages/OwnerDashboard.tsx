@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import type { ClientAccount, StoreItem } from "../types";
 
 interface OwnerDashboardProps {
@@ -16,8 +16,11 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
 }) => {
   const storeCount = account.stores?.length || 0;
 
+  // Placeholder states for future modal/drawer view triggers
+  const [activeModal, setActiveModal] = useState<"ingredients" | "buildDrink" | null>(null);
+
   return (
-    <div className="min-h-screen bg-neutral-950 text-white flex flex-col">
+    <div className="min-h-screen bg-neutral-950 text-white flex flex-col select-none">
       {/* Header */}
       <header className="h-14 border-b border-neutral-800 px-6 flex items-center justify-between bg-neutral-900">
         <div className="flex items-center gap-3">
@@ -46,32 +49,98 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
         </div>
       </header>
 
-      {/* Metrics Content */}
+      {/* Main Content */}
       <main className="flex-1 p-8 max-w-6xl mx-auto w-full">
+        {/* Title */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white">Store Performance Overview</h1>
+          <h1 className="text-2xl font-bold text-white tracking-wide">
+            Store Performance Overview
+          </h1>
           <p className="text-sm text-neutral-400">
-            Authenticated Owner: <span className="text-emerald-400">{account.owner || account.name}</span>
+            Authenticated Owner:{" "}
+            <span className="text-emerald-400 font-semibold">
+              {account.owner || account.name}
+            </span>
           </p>
         </div>
 
+        {/* 1. 3 KPI Stat Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="p-6 bg-neutral-900 border border-neutral-800 rounded-xl">
-            <p className="text-xs text-neutral-400 uppercase font-semibold">Today's Gross Sales</p>
+          <div className="p-6 bg-neutral-900 border border-neutral-800 rounded-2xl shadow-lg">
+            <p className="text-xs text-neutral-400 uppercase font-semibold tracking-wider">
+              Today's Gross Sales
+            </p>
             <p className="text-3xl font-bold text-emerald-400 mt-2">₱0.00</p>
             <p className="text-xs text-neutral-500 mt-1">Updated in real-time</p>
           </div>
 
-          <div className="p-6 bg-neutral-900 border border-neutral-800 rounded-xl">
-            <p className="text-xs text-neutral-400 uppercase font-semibold">Transactions</p>
+          <div className="p-6 bg-neutral-900 border border-neutral-800 rounded-2xl shadow-lg">
+            <p className="text-xs text-neutral-400 uppercase font-semibold tracking-wider">
+              Transactions
+            </p>
             <p className="text-3xl font-bold text-white mt-2">0</p>
             <p className="text-xs text-neutral-500 mt-1">Completed orders</p>
           </div>
 
-          <div className="p-6 bg-neutral-900 border border-neutral-800 rounded-xl">
-            <p className="text-xs text-neutral-400 uppercase font-semibold">Active Terminal</p>
-            <p className="text-xl font-semibold text-white mt-2">{store.name || store.id}</p>
+          <div className="p-6 bg-neutral-900 border border-neutral-800 rounded-2xl shadow-lg">
+            <p className="text-xs text-neutral-400 uppercase font-semibold tracking-wider">
+              Active Terminal
+            </p>
+            <p className="text-xl font-semibold text-white mt-2">
+              {store.name || store.id}
+            </p>
             <p className="text-xs text-emerald-500 mt-1">Online & Ready</p>
+          </div>
+        </div>
+
+        {/* 2. Management Quick Actions */}
+        <div className="border-t border-neutral-800/80 pt-6">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-4">
+            Catalog & Inventory Management
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Action 1: Update Ingredients */}
+            <button
+              onClick={() => setActiveModal("ingredients")}
+              className="p-6 bg-neutral-900/80 hover:bg-neutral-900 border border-neutral-800 hover:border-emerald-500/50 rounded-2xl text-left transition flex items-center justify-between group shadow-lg active:scale-[0.99]"
+            >
+              <div>
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 font-bold mb-3 border border-emerald-500/20 group-hover:scale-110 transition">
+                  📦
+                </div>
+                <h3 className="text-lg font-semibold text-neutral-100 group-hover:text-emerald-400 transition">
+                  Update Ingredients
+                </h3>
+                <p className="text-xs text-neutral-400 mt-1">
+                  Adjust current raw stock levels, set units, and manage reorder alerts.
+                </p>
+              </div>
+              <span className="text-emerald-400 text-lg opacity-0 group-hover:opacity-100 transition translate-x-[-6px] group-hover:translate-x-0">
+                &rarr;
+              </span>
+            </button>
+
+            {/* Action 2: Build a Drink */}
+            <button
+              onClick={() => setActiveModal("buildDrink")}
+              className="p-6 bg-neutral-900/80 hover:bg-neutral-900 border border-neutral-800 hover:border-emerald-500/50 rounded-2xl text-left transition flex items-center justify-between group shadow-lg active:scale-[0.99]"
+            >
+              <div>
+                <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 font-bold mb-3 border border-emerald-500/20 group-hover:scale-110 transition">
+                  ☕
+                </div>
+                <h3 className="text-lg font-semibold text-neutral-100 group-hover:text-emerald-400 transition">
+                  Build a Drink
+                </h3>
+                <p className="text-xs text-neutral-400 mt-1">
+                  Compose drink recipes, map ingredient deductions, and set terminal pricing.
+                </p>
+              </div>
+              <span className="text-emerald-400 text-lg opacity-0 group-hover:opacity-100 transition translate-x-[-6px] group-hover:translate-x-0">
+                &rarr;
+              </span>
+            </button>
           </div>
         </div>
       </main>
