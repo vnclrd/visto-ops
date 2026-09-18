@@ -2,9 +2,9 @@ export interface StoreItem {
   id: string;
   name?: string;
   location?: string;
-  currency?: string;
   isActive?: boolean;
   createdAt?: string;
+  businessType?: "fnb" | "retail" | "service" | string;
 }
 
 export interface ClientAccount {
@@ -12,8 +12,8 @@ export interface ClientAccount {
   name: string;
   email: string;
   owner?: string;
-  pin?: string;
-  stores?: StoreItem[];
+  businessType?: "fnb" | "retail" | "service" | string;
+  stores: StoreItem[];
 }
 
 export interface CatalogItem {

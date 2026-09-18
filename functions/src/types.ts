@@ -1,18 +1,21 @@
 export interface StoreItem { // visto-accountLogin
   id: string;
-  name: string;
+  name?: string;
   location?: string;
-  isActive: boolean;
+  isActive?: boolean;
+  createdAt?: string;
+  businessType?: "fnb" | "retail" | "service" | string;
 }
 
 export interface ClientAccount { // visto-accountLogin
   id: string;
   name: string;
   email: string;
-  password: string;
-  owner?: string;
+  password?: string;
   pin?: string;
-  stores?: StoreItem[];
+  owner?: string;
+  businessType?: "fnb" | "retail" | "service" | string;
+  stores: StoreItem[];
 }
 
 export interface VerifyPinResult { // visto-accountVerifyPin

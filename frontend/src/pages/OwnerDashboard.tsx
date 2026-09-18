@@ -16,11 +16,12 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
   onOpenGlobalDashboard,
 }) => {
   const storeCount = account.stores?.length || 0;
-
-  // View routing state
   const [currentView, setCurrentView] = useState<"overview" | "ingredients" | "buildDrink">("overview");
 
-  // 1. Render Dedicated Ingredients Management View
+  // Store-level override falls back to client account level, defaulting to "fnb"
+  const businessType = store.businessType || account.businessType || "fnb";
+  const isFnB = businessType === "fnb";
+
   if (currentView === "ingredients") {
     return (
       <ManageIngredientsPage
@@ -31,7 +32,6 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
     );
   }
 
-  // 2. Default Overview Dashboard View
   return (
     <div className="min-h-screen bg-neutral-950 text-white flex flex-col select-none">
       {/* Header */}
@@ -111,40 +111,46 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
             Catalog & Inventory Management
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <button
-              onClick={() => setCurrentView("ingredients")}
-              className="p-6 bg-neutral-900/80 hover:bg-neutral-900 border border-neutral-800 hover:border-emerald-500/50 rounded-2xl text-left transition flex items-center justify-between group shadow-lg active:scale-[0.99]"
-            >
-              <div>
-                <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 font-bold mb-3 border border-emerald-500/20 group-hover:scale-110 transition">
-                  📦
+          <div className={`grid gap-6 ${isFnB ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"}`}>
+            {/* Action 1: Update Ingredients (Only rendered if businessType === "fnb") */}
+            {isFnB && (
+              <button
+                onClick={() => setCurrentView("ingredients")}
+                className="p-6 bg-neutral-900/80 hover:bg-neutral-900 border border-neutral-800 hover:border-emerald-500/50 rounded-2xl text-left transition flex items-center justify-between group shadow-lg active:scale-[0.99]"
+              >
+                <div>
+                  <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 font-bold mb-3 border border-emerald-500/20 group-hover:scale-110 transition">
+                    📦
+                  </div>
+                  <h3 className="text-lg font-semibold text-neutral-100 group-hover:text-emerald-400 transition">
+                    Update Ingredients
+                  </h3>
+                  <p className="text-xs text-neutral-400 mt-1">
+                    Adjust current raw stock levels, set units, and manage reorder alerts.
+                  </p>
                 </div>
-                <h3 className="text-lg font-semibold text-neutral-100 group-hover:text-emerald-400 transition">
-                  Update Ingredients
-                </h3>
-                <p className="text-xs text-neutral-400 mt-1">
-                  Adjust current raw stock levels, set units, and manage reorder alerts.
-                </p>
-              </div>
-              <span className="text-emerald-400 text-lg opacity-0 group-hover:opacity-100 transition translate-x-[-6px] group-hover:translate-x-0">
-                &rarr;
-              </span>
-            </button>
+                <span className="text-emerald-400 text-lg opacity-0 group-hover:opacity-100 transition translate-x-[-6px] group-hover:translate-x-0">
+                  &rarr;
+                </span>
+              </button>
+            )}
 
+            {/* Action 2: Dynamic Product Creator */}
             <button
               onClick={() => setCurrentView("buildDrink")}
               className="p-6 bg-neutral-900/80 hover:bg-neutral-900 border border-neutral-800 hover:border-emerald-500/50 rounded-2xl text-left transition flex items-center justify-between group shadow-lg active:scale-[0.99]"
             >
               <div>
                 <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 font-bold mb-3 border border-emerald-500/20 group-hover:scale-110 transition">
-                  ☕
+                  {isFnB ? "☕" : "🏷️"}
                 </div>
                 <h3 className="text-lg font-semibold text-neutral-100 group-hover:text-emerald-400 transition">
-                  Build a Drink
+                  {isFnB ? "Build a Drink" : "Manage Products"}
                 </h3>
                 <p className="text-xs text-neutral-400 mt-1">
-                  Compose drink recipes, map ingredient deductions, and set terminal pricing.
+                  {isFnB
+                    ? "Compose drink recipes, map ingredient deductions, and set terminal pricing."
+                    : "Add retail items, adjust selling prices, and maintain inventory."}
                 </p>
               </div>
               <span className="text-emerald-400 text-lg opacity-0 group-hover:opacity-100 transition translate-x-[-6px] group-hover:translate-x-0">

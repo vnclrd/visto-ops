@@ -17,12 +17,11 @@ export class AccountRepository {
     const doc = snapshot.docs[0];
     const data = doc.data();
 
-    // Query subcollection 'stores'
+    // Read store subcollection
     const storesSnapshot = await doc.ref.collection("stores").get();
     const stores: StoreItem[] = storesSnapshot.docs.map((storeDoc) => {
       const storeData = storeDoc.data();
-      
-      // Parse Firestore Timestamp to ISO string
+
       let createdAtStr: string | undefined = undefined;
       if (storeData.createdAt?.toDate) {
         createdAtStr = storeData.createdAt.toDate().toISOString();
@@ -36,6 +35,7 @@ export class AccountRepository {
         location: storeData.location ?? "",
         isActive: storeData.isActive ?? true,
         createdAt: createdAtStr,
+        businessType: storeData.businessType ?? undefined,
       };
     });
 
@@ -45,15 +45,14 @@ export class AccountRepository {
       email: data.email ?? "",
       password: data.password ?? "",
       owner: data.owner ?? "",
+      businessType: data.businessType ?? "fnb",
       stores,
     };
   }
 
   async getOwnerPinById(clientId: string): Promise<string | null> {
     const doc = await this.collection.doc(clientId).get();
-    if (!doc.exists) {
-      return null;
-    }
+    if (!doc.exists) return null;
     const data = doc.data();
     return data?.pin !== undefined ? String(data.pin).trim() : null;
   }
@@ -65,9 +64,7 @@ export class AccountRepository {
       .doc(storeId)
       .get();
 
-    if (!storeDoc.exists) {
-      return null;
-    }
+    if (!storeDoc.exists) return null;
     const data = storeDoc.data();
     return data?.storePin !== undefined ? String(data.storePin).trim() : null;
   }
