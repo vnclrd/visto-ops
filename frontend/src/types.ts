@@ -28,13 +28,30 @@ export interface CartItem extends CatalogItem {
   quantity: number;
 }
 
-export interface LoginPayload {
+export interface LoginPayload { // visto-accountLogin
   email: string;
   password: string;
 }
 
-export interface LoginResponse {
+export interface LoginResponse { // visto-accountLogin
   success: boolean;
   account?: ClientAccount;
   error?: string;
+}
+
+export interface IngredientRecord { // visto-ingredientGet
+  id: string;
+  name: string;
+  category: "Dairy" | "Beans" | "Syrups" | "Powders" | "Packaging" | string;
+  unit: "ml" | "g" | "pcs" | "shots" | string;
+  currentStock: number;
+  reorderLevel: number;
+  packageSpecs: {
+    packagePrice: number;
+    packageSize: number;
+  };
+  costPerUnit: number;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }

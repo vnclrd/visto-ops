@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import type { ClientAccount, StoreItem } from "../types";
+import { ManageIngredientsPage } from "./ManageIngredients";
 
 interface OwnerDashboardProps {
   account: ClientAccount;
@@ -16,9 +17,21 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
 }) => {
   const storeCount = account.stores?.length || 0;
 
-  // Placeholder states for future modal/drawer view triggers
-  const [activeModal, setActiveModal] = useState<"ingredients" | "buildDrink" | null>(null);
+  // View routing state
+  const [currentView, setCurrentView] = useState<"overview" | "ingredients" | "buildDrink">("overview");
 
+  // 1. Render Dedicated Ingredients Management View
+  if (currentView === "ingredients") {
+    return (
+      <ManageIngredientsPage
+        account={account}
+        store={store}
+        onBack={() => setCurrentView("overview")}
+      />
+    );
+  }
+
+  // 2. Default Overview Dashboard View
   return (
     <div className="min-h-screen bg-neutral-950 text-white flex flex-col select-none">
       {/* Header */}
@@ -51,7 +64,6 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
 
       {/* Main Content */}
       <main className="flex-1 p-8 max-w-6xl mx-auto w-full">
-        {/* Title */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-white tracking-wide">
             Store Performance Overview
@@ -64,7 +76,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
           </p>
         </div>
 
-        {/* 1. 3 KPI Stat Cards */}
+        {/* 3 KPI Stat Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="p-6 bg-neutral-900 border border-neutral-800 rounded-2xl shadow-lg">
             <p className="text-xs text-neutral-400 uppercase font-semibold tracking-wider">
@@ -93,16 +105,15 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
           </div>
         </div>
 
-        {/* 2. Management Quick Actions */}
+        {/* Action Hub */}
         <div className="border-t border-neutral-800/80 pt-6">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-4">
             Catalog & Inventory Management
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Action 1: Update Ingredients */}
             <button
-              onClick={() => setActiveModal("ingredients")}
+              onClick={() => setCurrentView("ingredients")}
               className="p-6 bg-neutral-900/80 hover:bg-neutral-900 border border-neutral-800 hover:border-emerald-500/50 rounded-2xl text-left transition flex items-center justify-between group shadow-lg active:scale-[0.99]"
             >
               <div>
@@ -121,9 +132,8 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
               </span>
             </button>
 
-            {/* Action 2: Build a Drink */}
             <button
-              onClick={() => setActiveModal("buildDrink")}
+              onClick={() => setCurrentView("buildDrink")}
               className="p-6 bg-neutral-900/80 hover:bg-neutral-900 border border-neutral-800 hover:border-emerald-500/50 rounded-2xl text-left transition flex items-center justify-between group shadow-lg active:scale-[0.99]"
             >
               <div>
