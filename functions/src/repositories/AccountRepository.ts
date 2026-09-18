@@ -6,7 +6,7 @@ export class AccountRepository {
 
   async findByEmail(email: string): Promise<ClientAccount | null> {
     const snapshot = await this.collection
-      .where("email", "==", email)
+      .where("email", "==", email.trim())
       .limit(1)
       .get();
 
@@ -17,6 +17,7 @@ export class AccountRepository {
     const doc = snapshot.docs[0];
     const data = doc.data();
 
+    // Query subcollection 'stores'
     const storesSnapshot = await doc.ref.collection("stores").get();
     const stores: StoreItem[] = storesSnapshot.docs.map((storeDoc) => {
       const storeData = storeDoc.data();
@@ -29,7 +30,7 @@ export class AccountRepository {
     });
 
     return {
-      id: doc.id,
+      id: doc.id, // Will be "VistoOps"
       name: data.name ?? "",
       email: data.email ?? "",
       password: data.password ?? "",
@@ -38,12 +39,28 @@ export class AccountRepository {
     };
   }
 
-  async getPinById(clientId: string): Promise<string | null> {
+  // Reads: /clients/{clientId} -> field 'pin'
+  async getOwnerPinById(clientId: string): Promise<string | null> {
     const doc = await this.collection.doc(clientId).get();
     if (!doc.exists) {
       return null;
     }
     const data = doc.data();
-    return data?.pin ? String(data.pin) : null;
+    return data?.pin !== undefined ? String(data.pin).trim() : null;
+  }
+
+  // Reads: /clients/{clientId}/stores/{storeId} -> field 'storePin'
+  async getStorePinById(clientId: string, storeId: string): Promise<string | null> {
+    const storeDoc = await this.collection
+      .doc(clientId)
+      .collection("stores")
+      .doc(storeId)
+      .get();
+
+    if (!storeDoc.exists) {
+      return null;
+    }
+    const data = storeDoc.data();
+    return data?.storePin !== undefined ? String(data.storePin).trim() : null;
   }
 }

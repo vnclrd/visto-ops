@@ -1,4 +1,4 @@
-import type { LoginPayload, ClientAccount, LoginResponse } from "../types"
+import type { LoginPayload, ClientAccount, LoginResponse } from "../types";
 
 const BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -22,13 +22,17 @@ export async function loginClient(payload: LoginPayload): Promise<ClientAccount>
 }
 
 // visto-accountVerifyPin
-export async function verifyOwnerPin(clientId: string, pin: string): Promise<boolean> {
+export async function verifyPin(clientId: string, pin: string, storeId?: string): Promise<boolean> {
+  const bodyPayload = storeId 
+    ? { clientId, storeId, storePin: pin }
+    : { clientId, pin };
+
   const response = await fetch(`${BASE_URL}/accountVerifyPin`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ clientId, pin }),
+    body: JSON.stringify(bodyPayload),
   });
 
   const data = await response.json();
@@ -39,3 +43,6 @@ export async function verifyOwnerPin(clientId: string, pin: string): Promise<boo
 
   return true;
 }
+
+// Backward-compatible alias for existing calls
+export const verifyOwnerPin = (clientId: string, pin: string) => verifyPin(clientId, pin);

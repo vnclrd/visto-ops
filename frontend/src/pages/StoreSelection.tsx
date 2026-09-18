@@ -1,12 +1,14 @@
 import React, { useState } from "react";
 import type { StoreItem, ClientAccount } from "../types";
-import { verifyOwnerPin } from "../services/authApi";
+import { verifyPin } from "../services/authApi";
 
 interface StoreSelectionProps {
   account: ClientAccount;
   onSelectStore: (store: StoreItem) => void;
   onOpenGlobalDashboard: () => void;
 }
+
+type ModalType = "store" | "owner" | null;
 
 export const StoreSelectionPage: React.FC<StoreSelectionProps> = ({
   account,
@@ -15,23 +17,55 @@ export const StoreSelectionPage: React.FC<StoreSelectionProps> = ({
 }) => {
   const stores = account.stores || [];
 
-  // PIN Modal State
-  const [showPinModal, setShowPinModal] = useState<boolean>(false);
+  const [modalType, setModalType] = useState<ModalType>(null);
+  const [targetStore, setTargetStore] = useState<StoreItem | null>(null);
   const [enteredPin, setEnteredPin] = useState<string>("");
   const [pinError, setPinError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  const openStorePinModal = (store: StoreItem) => {
+    setTargetStore(store);
+    setPinError(null);
+    setEnteredPin("");
+    setModalType("store");
+  };
+
+  const openOwnerPinModal = () => {
+    setTargetStore(null);
+    setPinError(null);
+    setEnteredPin("");
+    setModalType("owner");
+  };
+
+  const closeModal = () => {
+    setModalType(null);
+    setTargetStore(null);
+    setEnteredPin("");
+    setPinError(null);
+  };
 
   const handlePinSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setPinError(null);
+    setIsLoading(true);
 
     try {
-      await verifyOwnerPin(account.id, enteredPin);
-      setShowPinModal(false);
-      setEnteredPin("");
-      onOpenGlobalDashboard();
+      if (modalType === "store" && targetStore) {
+        // Verifies storePin for this store document
+        await verifyPin(account.id, enteredPin, targetStore.id);
+        closeModal();
+        onSelectStore(targetStore);
+      } else if (modalType === "owner") {
+        // Verifies owner pin
+        await verifyPin(account.id, enteredPin);
+        closeModal();
+        onOpenGlobalDashboard();
+      }
     } catch (err: any) {
       setPinError(err.message || "Invalid PIN");
       setEnteredPin("");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -44,11 +78,7 @@ export const StoreSelectionPage: React.FC<StoreSelectionProps> = ({
           </h2>
           {stores.length > 1 && (
             <button
-              onClick={() => {
-                setPinError(null);
-                setEnteredPin("");
-                setShowPinModal(true);
-              }}
+              onClick={openOwnerPinModal}
               className="text-xs font-medium px-3 py-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition"
             >
               Global Dashboard &rarr;
@@ -69,7 +99,7 @@ export const StoreSelectionPage: React.FC<StoreSelectionProps> = ({
             {stores.map((store) => (
               <button
                 key={store.id}
-                onClick={() => onSelectStore(store)}
+                onClick={() => openStorePinModal(store)}
                 className="w-full flex items-center justify-between p-4 rounded-xl border border-neutral-800 bg-neutral-950/60 hover:bg-neutral-800 hover:border-neutral-700 transition text-left group"
               >
                 <div>
@@ -89,15 +119,17 @@ export const StoreSelectionPage: React.FC<StoreSelectionProps> = ({
         )}
       </div>
 
-      {/* PIN Verification Modal */}
-      {showPinModal && (
+      {/* Unified Verification Modal */}
+      {modalType && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-neutral-900 border border-neutral-800 rounded-xl max-w-sm w-full p-6 shadow-2xl text-white">
             <h3 className="text-lg font-semibold text-center mb-1">
-              Owner Verification
+              {modalType === "store" ? "Store Access Verification" : "Owner Verification"}
             </h3>
             <p className="text-xs text-neutral-400 text-center mb-4">
-              Enter PIN to access the Enterprise Global Dashboard
+              {modalType === "store"
+                ? `Enter store PIN for ${targetStore?.name || targetStore?.id}`
+                : "Enter PIN to access Enterprise Global Dashboard"}
             </p>
 
             {pinError && (
@@ -120,16 +152,17 @@ export const StoreSelectionPage: React.FC<StoreSelectionProps> = ({
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setShowPinModal(false)}
+                  onClick={closeModal}
                   className="w-1/2 py-2 text-xs bg-neutral-800 hover:bg-neutral-700 rounded text-neutral-300 font-medium transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="w-1/2 py-2 text-xs bg-emerald-500 hover:bg-emerald-400 rounded text-black font-semibold transition"
+                  disabled={isLoading}
+                  className="w-1/2 py-2 text-xs bg-emerald-500 hover:bg-emerald-400 rounded text-black font-semibold transition disabled:opacity-50"
                 >
-                  Confirm PIN
+                  {isLoading ? "Verifying..." : "Confirm PIN"}
                 </button>
               </div>
             </form>

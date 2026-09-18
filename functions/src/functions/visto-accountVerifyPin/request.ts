@@ -1,4 +1,6 @@
 export interface AccountVerifyPinRequest {
   clientId: string;
-  pin: string;
+  storeId?: string;
+  pin?: string;
+  storePin?: string;
 }

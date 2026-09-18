@@ -14,20 +14,37 @@ export class AccountService {
       throw new Error("Invalid client credentials");
     }
 
-    // Exclude both password and pin from the returned safeData
     const { password, pin, ...safeData } = client;
     return safeData;
   }
 
-  async verifyOwnerPin(clientId: string, inputPin: string): Promise<boolean> {
-    const storedPin = await this.repo.getPinById(clientId);
+  async verifyPin(clientId: string, inputPin: string, storeId?: string): Promise<boolean> {
+    const sanitizedInput = String(inputPin).trim();
 
-    if (!storedPin) {
-      throw new Error("Client account not found or PIN not configured");
+    if (storeId) {
+      // Validating Store Access -> must match storePin
+      const expectedStorePin = await this.repo.getStorePinById(clientId, storeId);
+      
+      if (!expectedStorePin) {
+        throw new Error(`Store '${storeId}' not found or storePin not configured`);
+      }
+
+      if (expectedStorePin !== sanitizedInput) {
+        throw new Error("Invalid Store PIN");
+      }
+
+      return true;
     }
 
-    if (storedPin !== inputPin) {
-      throw new Error("Invalid owner PIN");
+    // Validating Dashboard -> must match owner pin
+    const expectedOwnerPin = await this.repo.getOwnerPinById(clientId);
+
+    if (!expectedOwnerPin) {
+      throw new Error("Owner PIN not configured for this account");
+    }
+
+    if (expectedOwnerPin !== sanitizedInput) {
+      throw new Error("Invalid Owner PIN");
     }
 
     return true;
