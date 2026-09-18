@@ -1,4 +1,5 @@
-import { AccountRepository, ClientAccount } from "../repositories/AccountRepository";
+import { AccountRepository } from "../repositories/AccountRepository";
+import type { ClientAccount } from "../types";
 
 export class AccountService {
   constructor(private repo = new AccountRepository()) {}

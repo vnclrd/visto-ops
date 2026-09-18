@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { loginClient, type ClientAccount } from "../services/authApi";
+import { loginClient } from "../services/authApi";
+import type { ClientAccount } from "../types";
 
 interface LoginProps {
   onLoginSuccess: (account: ClientAccount) => void;

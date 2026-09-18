@@ -1,4 +1,4 @@
-import { AccountLoginRequest } from "./request";
+import type { AccountLoginRequest } from "./request";
 import { AccountService } from "../../services/AccountService";
 
 const accountService = new AccountService();

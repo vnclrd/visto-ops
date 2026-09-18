@@ -1,11 +1,5 @@
 import { db } from "../config/firebase";
-
-export interface ClientAccount {
-  id: string;
-  name: string;
-  email: string;
-  password: string;
-}
+import type { ClientAccount, StoreItem } from "../types";
 
 export class AccountRepository {
   private collection = db.collection("clients");
@@ -23,11 +17,24 @@ export class AccountRepository {
     const doc = snapshot.docs[0];
     const data = doc.data();
 
+    // Fetch the stores subcollection
+    const storesSnapshot = await doc.ref.collection("stores").get();
+    const stores: StoreItem[] = storesSnapshot.docs.map((storeDoc) => {
+      const storeData = storeDoc.data();
+      return {
+        id: storeDoc.id,
+        name: storeData.name ?? storeDoc.id,
+        location: storeData.location ?? "",
+        isActive: storeData.isActive ?? true,
+      };
+    });
+
     return {
       id: doc.id,
       name: data.name ?? "",
       email: data.email ?? "",
       password: data.password ?? "",
+      stores,
     };
   }
 }

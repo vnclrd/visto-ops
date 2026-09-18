@@ -1,21 +1,6 @@
+import type { LoginPayload, ClientAccount, LoginResponse } from "../types"
+
 const BASE_URL = import.meta.env.VITE_API_URL;
-
-export interface LoginPayload {
-  email: string;
-  password: string;
-}
-
-export interface ClientAccount {
-  id: string;
-  name: string;
-  email: string;
-}
-
-export interface LoginResponse {
-  success: boolean;
-  account?: ClientAccount;
-  error?: string;
-}
 
 export async function loginClient(payload: LoginPayload): Promise<ClientAccount> {
   const response = await fetch(`${BASE_URL}/accountLogin`, {
