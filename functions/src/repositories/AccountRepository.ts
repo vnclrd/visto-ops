@@ -21,16 +21,26 @@ export class AccountRepository {
     const storesSnapshot = await doc.ref.collection("stores").get();
     const stores: StoreItem[] = storesSnapshot.docs.map((storeDoc) => {
       const storeData = storeDoc.data();
+      
+      // Parse Firestore Timestamp to ISO string
+      let createdAtStr: string | undefined = undefined;
+      if (storeData.createdAt?.toDate) {
+        createdAtStr = storeData.createdAt.toDate().toISOString();
+      } else if (storeData.createdAt) {
+        createdAtStr = new Date(storeData.createdAt).toISOString();
+      }
+
       return {
         id: storeDoc.id,
         name: storeData.name ?? storeDoc.id,
         location: storeData.location ?? "",
         isActive: storeData.isActive ?? true,
+        createdAt: createdAtStr,
       };
     });
 
     return {
-      id: doc.id, // Will be "VistoOps"
+      id: doc.id,
       name: data.name ?? "",
       email: data.email ?? "",
       password: data.password ?? "",
@@ -39,7 +49,6 @@ export class AccountRepository {
     };
   }
 
-  // Reads: /clients/{clientId} -> field 'pin'
   async getOwnerPinById(clientId: string): Promise<string | null> {
     const doc = await this.collection.doc(clientId).get();
     if (!doc.exists) {
@@ -49,7 +58,6 @@ export class AccountRepository {
     return data?.pin !== undefined ? String(data.pin).trim() : null;
   }
 
-  // Reads: /clients/{clientId}/stores/{storeId} -> field 'storePin'
   async getStorePinById(clientId: string, storeId: string): Promise<string | null> {
     const storeDoc = await this.collection
       .doc(clientId)

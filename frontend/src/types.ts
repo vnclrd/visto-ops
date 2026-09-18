@@ -4,6 +4,7 @@ export interface StoreItem {
   location?: string;
   currency?: string;
   isActive?: boolean;
+  createdAt?: string;
 }
 
 export interface ClientAccount {
