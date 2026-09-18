@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "visto-ops-dev",
+    "dev": "visto-ops-dev",
+    "staging": "visto-ops-staging",
+    "prod": "visto-ops-prod"
+  }
+}
