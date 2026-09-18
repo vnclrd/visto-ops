@@ -2,6 +2,7 @@ import type { LoginPayload, ClientAccount, LoginResponse } from "../types"
 
 const BASE_URL = import.meta.env.VITE_API_URL;
 
+// visto-accountLogin
 export async function loginClient(payload: LoginPayload): Promise<ClientAccount> {
   const response = await fetch(`${BASE_URL}/accountLogin`, {
     method: "POST",
@@ -18,4 +19,23 @@ export async function loginClient(payload: LoginPayload): Promise<ClientAccount>
   }
 
   return data.account;
+}
+
+// visto-accountVerifyPin
+export async function verifyOwnerPin(clientId: string, pin: string): Promise<boolean> {
+  const response = await fetch(`${BASE_URL}/accountVerifyPin`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ clientId, pin }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok || !data.success || !data.verified) {
+    throw new Error(data.error || "Invalid PIN. Access denied.");
+  }
+
+  return true;
 }

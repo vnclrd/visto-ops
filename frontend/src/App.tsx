@@ -1,36 +1,87 @@
 import { useState } from "react";
 import { LoginPage } from "./pages/Login";
 import { StoreSelectionPage } from "./pages/StoreSelection";
+import { PosTerminal } from "./pages/PosTerminal";
+import { OwnerDashboard } from "./pages/OwnerDashboard";
+import { OwnerGlobalDashboard } from "./pages/OwnerGlobalDashboard";
 import type { ClientAccount, StoreItem } from "./types";
 
 export default function App() {
   const [currentAccount, setCurrentAccount] = useState<ClientAccount | null>(null);
   const [selectedStore, setSelectedStore] = useState<StoreItem | null>(null);
+  const [isStoreOwnerView, setIsStoreOwnerView] = useState<boolean>(false);
+  const [isGlobalOwnerView, setIsGlobalOwnerView] = useState<boolean>(false);
 
-  // Step 3: Store chosen screen
-  if (selectedStore) {
-    return (
-      <div className="min-h-screen w-full bg-black flex flex-col items-center justify-center text-white">
-        <h1 className="text-3xl font-semibold tracking-wide mb-2">
-          Chosen store
-        </h1>
-        <p className="text-gray-400 text-sm">
-          {selectedStore.name || selectedStore.id}
-        </p>
-      </div>
-    );
-  }
+  const handleLogout = () => {
+    setSelectedStore(null);
+    setCurrentAccount(null);
+    setIsStoreOwnerView(false);
+    setIsGlobalOwnerView(false);
+  };
 
-  // Step 2: Store selection screen
-  if (currentAccount) {
+  // Step 5: Global Enterprise Dashboard View
+  if (currentAccount && isGlobalOwnerView) {
     return (
-      <StoreSelectionPage
+      <OwnerGlobalDashboard
         account={currentAccount}
-        onSelectStore={(store) => setSelectedStore(store)}
+        currentStore={selectedStore}
+        onBack={() => setIsGlobalOwnerView(false)}
+        onSelectStore={(store) => {
+          setSelectedStore(store);
+          setIsGlobalOwnerView(false);
+          setIsStoreOwnerView(false);
+        }}
       />
     );
   }
 
-  // Step 1: Login screen
+  // Step 4: Single Store Owner Dashboard View
+  if (currentAccount && selectedStore && isStoreOwnerView) {
+    return (
+      <OwnerDashboard
+        account={currentAccount}
+        store={selectedStore}
+        onBackToRegister={() => setIsStoreOwnerView(false)}
+        onOpenGlobalDashboard={() => setIsGlobalOwnerView(true)}
+      />
+    );
+  }
+
+  // Step 3: POS Terminal Register
+  if (currentAccount && selectedStore) {
+    return (
+      <PosTerminal
+        account={currentAccount}
+        store={selectedStore}
+        onLogout={handleLogout}
+        onSwitchStore={() => {
+          setSelectedStore(null);
+          setIsStoreOwnerView(false);
+        }}
+        onOpenOwnerDashboard={() => setIsStoreOwnerView(true)}
+      />
+    );
+  }
+
+  // Step 2: Store Selection
+  if (currentAccount) {
+    return (
+      <div className="relative">
+        <button
+          onClick={handleLogout}
+          className="absolute top-6 right-6 text-sm px-4 py-2 rounded bg-gray-200 hover:bg-gray-300 text-gray-700 transition"
+        >
+          Log Out
+        </button>
+        <StoreSelectionPage
+          account={currentAccount}
+          onSelectStore={(store) => setSelectedStore(store)}
+          onOpenGlobalDashboard={() => setIsGlobalOwnerView(true)}
+        />
+      </div>
+    );
+  }
+
+  // Step 1: Login
   return <LoginPage onLoginSuccess={(account) => setCurrentAccount(account)} />;
 }

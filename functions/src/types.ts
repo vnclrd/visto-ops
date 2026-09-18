@@ -10,5 +10,11 @@ export interface ClientAccount {
   name: string;
   email: string;
   password: string;
+  owner?: string;
+  pin?: string;
   stores?: StoreItem[];
+}
+
+export interface VerifyPinResult {
+  verified: boolean;
 }

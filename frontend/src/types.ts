@@ -10,7 +10,21 @@ export interface ClientAccount {
   id: string;
   name: string;
   email: string;
+  owner?: string;
+  pin?: string;
   stores?: StoreItem[];
+}
+
+export interface CatalogItem {
+  id: string;
+  name: string;
+  category: string;
+  price: number;
+  isAvailable: boolean;
+}
+
+export interface CartItem extends CatalogItem {
+  quantity: number;
 }
 
 export interface LoginPayload {

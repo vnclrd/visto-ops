@@ -17,7 +17,6 @@ export class AccountRepository {
     const doc = snapshot.docs[0];
     const data = doc.data();
 
-    // Fetch the stores subcollection
     const storesSnapshot = await doc.ref.collection("stores").get();
     const stores: StoreItem[] = storesSnapshot.docs.map((storeDoc) => {
       const storeData = storeDoc.data();
@@ -34,7 +33,17 @@ export class AccountRepository {
       name: data.name ?? "",
       email: data.email ?? "",
       password: data.password ?? "",
+      owner: data.owner ?? "",
       stores,
     };
+  }
+
+  async getPinById(clientId: string): Promise<string | null> {
+    const doc = await this.collection.doc(clientId).get();
+    if (!doc.exists) {
+      return null;
+    }
+    const data = doc.data();
+    return data?.pin ? String(data.pin) : null;
   }
 }
