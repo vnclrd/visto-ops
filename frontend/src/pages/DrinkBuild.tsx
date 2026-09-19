@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import type {
   ClientAccount,
   StoreItem,
@@ -14,6 +14,11 @@ interface DrinkBuildProps {
   account: ClientAccount;
   store: StoreItem;
   onBack: () => void;
+}
+
+interface RemovedIngredientHistory {
+  item: RecipeIngredient;
+  index: number;
 }
 
 export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
@@ -35,10 +40,21 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
   const [drinkCategory, setDrinkCategory] = useState("Espresso");
   const [sellingPrice, setSellingPrice] = useState("");
 
+  // Baseline state for change detection
+  const [initialDrinkState, setInitialDrinkState] = useState<{
+    name: string;
+    category: string;
+    price: string;
+    recipe: RecipeIngredient[];
+  } | null>(null);
+
   // Recipe Builder State
   const [selectedIngredientId, setSelectedIngredientId] = useState("");
   const [ingredientAmount, setIngredientAmount] = useState("");
   const [recipe, setRecipe] = useState<RecipeIngredient[]>([]);
+
+  // Undo history stack for multiple deletions
+  const [removedHistory, setRemovedHistory] = useState<RemovedIngredientHistory[]>([]);
 
   // Action status
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -108,7 +124,47 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
   };
 
   const handleRemoveIngredient = (ingredientId: string) => {
-    setRecipe(recipe.filter((item) => item.ingredientId !== ingredientId));
+    const itemIndex = recipe.findIndex((item) => item.ingredientId === ingredientId);
+    if (itemIndex === -1) return;
+
+    const targetItem = recipe[itemIndex];
+    setRemovedHistory((prev) => [...prev, { item: targetItem, index: itemIndex }]);
+    setRecipe((prev) => prev.filter((item) => item.ingredientId !== ingredientId));
+  };
+
+  const handleUndoLast = () => {
+    if (removedHistory.length === 0) return;
+
+    const lastEntry = removedHistory[removedHistory.length - 1];
+    setRecipe((prev) => {
+      const updated = [...prev];
+      if (lastEntry.index <= updated.length) {
+        updated.splice(lastEntry.index, 0, lastEntry.item);
+      } else {
+        updated.push(lastEntry.item);
+      }
+      return updated;
+    });
+
+    setRemovedHistory((prev) => prev.slice(0, -1));
+  };
+
+  const handleUndoAll = () => {
+    if (removedHistory.length === 0) return;
+
+    let updated = [...recipe];
+    // Re-insert in reverse order of removal so original indices stay intact
+    for (let i = removedHistory.length - 1; i >= 0; i--) {
+      const entry = removedHistory[i];
+      if (entry.index <= updated.length) {
+        updated.splice(entry.index, 0, entry.item);
+      } else {
+        updated.push(entry.item);
+      }
+    }
+
+    setRecipe(updated);
+    setRemovedHistory([]);
   };
 
   const handleEditClick = (item: MenuItemRecord) => {
@@ -117,6 +173,15 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
     setDrinkCategory(item.category);
     setSellingPrice(String(item.price));
     setRecipe(item.recipe || []);
+    setRemovedHistory([]);
+
+    setInitialDrinkState({
+      name: item.name,
+      category: item.category,
+      price: String(item.price),
+      recipe: item.recipe ? JSON.parse(JSON.stringify(item.recipe)) : [],
+    });
+
     setActiveTab("builder");
   };
 
@@ -126,6 +191,8 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
     setDrinkCategory("Espresso");
     setSellingPrice("");
     setRecipe([]);
+    setInitialDrinkState(null);
+    setRemovedHistory([]);
   };
 
   const handleDeleteDrink = async (drinkId: string) => {
@@ -151,6 +218,27 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
   const grossProfit = retailPriceNum - totalRecipeCost;
   const profitMargin = retailPriceNum > 0 ? (grossProfit / retailPriceNum) * 100 : 0;
 
+  // Change Detection Logic
+  const hasFormChanged = useMemo(() => {
+    if (!editingDrinkId || !initialDrinkState) return true;
+
+    if (drinkName.trim() !== initialDrinkState.name.trim()) return true;
+    if (drinkCategory !== initialDrinkState.category) return true;
+    if (sellingPrice !== initialDrinkState.price) return true;
+
+    if (recipe.length !== initialDrinkState.recipe.length) return true;
+
+    const sortedCurrent = [...recipe].sort((a, b) => a.ingredientId.localeCompare(b.ingredientId));
+    const sortedInitial = [...initialDrinkState.recipe].sort((a, b) => a.ingredientId.localeCompare(b.ingredientId));
+
+    for (let i = 0; i < sortedCurrent.length; i++) {
+      if (sortedCurrent[i].ingredientId !== sortedInitial[i].ingredientId) return true;
+      if (Number(sortedCurrent[i].amount) !== Number(sortedInitial[i].amount)) return true;
+    }
+
+    return false;
+  }, [editingDrinkId, initialDrinkState, drinkName, drinkCategory, sellingPrice, recipe]);
+
   const handleSaveDrink = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
@@ -159,6 +247,8 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
       setSubmitError("Please provide a name, target price, and at least one ingredient.");
       return;
     }
+
+    if (editingDrinkId && !hasFormChanged) return;
 
     setIsSubmitting(true);
 
@@ -202,6 +292,13 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
     }
   };
 
+  const isButtonDisabled =
+    isSubmitting ||
+    !drinkName.trim() ||
+    retailPriceNum <= 0 ||
+    recipe.length === 0 ||
+    (Boolean(editingDrinkId) && !hasFormChanged);
+
   return (
     <div className="min-h-screen bg-neutral-950 text-white flex flex-col select-none">
       {/* Header */}
@@ -215,7 +312,6 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Mode Switcher */}
           <button
             onClick={() => setActiveTab("builder")}
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
@@ -352,7 +448,9 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
             <div className="lg:col-span-7 space-y-6">
               {editingDrinkId && (
                 <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-xs text-emerald-400 flex justify-between items-center">
-                  <span>Editing Drink: <strong>{drinkName}</strong></span>
+                  <span>
+                    Editing Drink: <strong>{drinkName}</strong>
+                  </span>
                   <button
                     onClick={handleCancelEdit}
                     className="underline text-neutral-300 hover:text-white"
@@ -462,6 +560,49 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
                   </div>
                 </div>
 
+                {/* Undo Notification Stack Banner */}
+                {removedHistory.length > 0 && (
+                  <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-xs flex items-center justify-between text-amber-400">
+                    <span>
+                      {removedHistory.length === 1 ? (
+                        <>
+                          Removed <strong>{removedHistory[0].item.name}</strong> from recipe.
+                        </>
+                      ) : (
+                        <>
+                          Removed <strong>{removedHistory.length} ingredients</strong> (
+                          {removedHistory.map((h) => h.item.name).join(", ")})
+                        </>
+                      )}
+                    </span>
+                    <div className="flex items-center gap-2 flex-shrink-0 ml-3">
+                      {removedHistory.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={handleUndoLast}
+                          className="underline hover:text-white transition"
+                        >
+                          Undo Last
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleUndoAll}
+                        className="font-bold underline hover:text-white transition"
+                      >
+                        {removedHistory.length > 1 ? "Undo All" : "Undo"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRemovedHistory([])}
+                        className="text-neutral-500 hover:text-neutral-300 ml-1 text-sm leading-none"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Table */}
                 <div className="border border-neutral-800 rounded-xl overflow-hidden mt-4">
                   <table className="w-full text-left text-xs">
@@ -568,15 +709,15 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
               <button
                 type="button"
                 onClick={handleSaveDrink}
-                disabled={
-                  isSubmitting || !drinkName.trim() || retailPriceNum <= 0 || recipe.length === 0
-                }
-                className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs uppercase tracking-wider rounded-xl transition shadow-lg disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.99]"
+                disabled={isButtonDisabled}
+                className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs uppercase tracking-wider rounded-xl transition shadow-lg disabled:opacity-30 disabled:cursor-not-allowed active:scale-[0.99]"
               >
                 {isSubmitting
                   ? "Saving Drink..."
                   : editingDrinkId
-                  ? "Update Catalog Item \u2192"
+                  ? hasFormChanged
+                    ? "Update Catalog Item \u2192"
+                    : "No Changes Detected"
                   : "Publish to Store Menu \u2192"}
               </button>
             </div>
