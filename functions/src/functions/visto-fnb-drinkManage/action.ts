@@ -1,13 +1,13 @@
-import type { DrinkBuildRequest } from "./request";
+import type { DrinkManageRequest } from "./request";
 import { DrinkService } from "../../services/DrinkService";
 import { DrinkMiddleware } from "../../middlewares/DrinkMiddleware";
 
 const drinkService = new DrinkService();
 
-export async function drinkBuildAction(payload: DrinkBuildRequest) {
-  DrinkMiddleware.validateBuildRequest(payload);
+export async function drinkManageAction(payload: DrinkManageRequest) {
+  DrinkMiddleware.validateManageRequest(payload);
 
-  return await drinkService.buildDrink(
+  return await drinkService.manageDrink(
     payload.clientId,
     payload.storeId,
     payload.operation,

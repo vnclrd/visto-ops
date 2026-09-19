@@ -1,19 +1,19 @@
 import { DrinkRepository } from "../repositories/DrinkRepository";
 import type { MenuItemRecord } from "../types";
 import type {
-  DrinkBuildDataPayload,
-  DrinkBuildOperation,
-} from "../functions/visto-fnb-drinkBuild/request";
+  DrinkManageDataPayload,
+  DrinkManageOperation,
+} from "../functions/visto-fnb-drinkManage/request";
 
 export class DrinkService {
   constructor(private repo = new DrinkRepository()) {}
 
-  async buildDrink(
+  async manageDrink(
     clientId: string,
     storeId: string,
-    operation: DrinkBuildOperation,
+    operation: DrinkManageOperation,
     drinkId?: string,
-    data?: DrinkBuildDataPayload
+    data?: DrinkManageDataPayload
   ) {
     if (operation === "create") {
       if (!data?.name || !data.name.trim()) {
@@ -26,7 +26,6 @@ export class DrinkService {
         throw new Error("A recipe must include at least one ingredient");
       }
 
-      // Compute recipe cost server-side from totalCost items
       const calculatedCost = data.recipe.reduce(
         (acc, curr) => acc + (Number(curr.totalCost) || 0),
         0

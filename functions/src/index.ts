@@ -9,6 +9,6 @@ export { accountVerifyPin } from './functions/visto-accountVerifyPin/handler';
 export { ingredientsGet } from './functions/visto-fnb-ingredientsGet/handler';
 export { ingredientsManage } from './functions/visto-fnb-ingredientsManage/handler';
 
-export { drinkBuild } from "./functions/visto-fnb-drinkBuild/handler";
+export { drinkManage } from './functions/visto-fnb-drinkManage/handler';
 
-export { catalogGet } from "./functions/visto-catalogGet/handler";
+export { catalogGet } from './functions/visto-catalogGet/handler';

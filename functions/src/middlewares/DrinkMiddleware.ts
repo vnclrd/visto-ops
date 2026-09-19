@@ -1,8 +1,8 @@
 import type { Response } from "express";
-import type { DrinkBuildRequest } from "../functions/visto-fnb-drinkBuild/request";
+import type { DrinkManageRequest } from "../functions/visto-fnb-drinkManage/request";
 
 export class DrinkMiddleware {
-  static validateBuildRequest(payload: DrinkBuildRequest) {
+  static validateManageRequest(payload: DrinkManageRequest) {
     if (!payload.clientId || !payload.clientId.trim()) {
       throw new Error("clientId is required");
     }
@@ -11,6 +11,9 @@ export class DrinkMiddleware {
     }
     if (!payload.operation || !["create", "update", "delete"].includes(payload.operation)) {
       throw new Error("Valid operation ('create', 'update', 'delete') is required");
+    }
+    if (payload.operation === "delete" && !payload.drinkId && !payload.data?.id) {
+      throw new Error("drinkId is required for deletion");
     }
   }
 

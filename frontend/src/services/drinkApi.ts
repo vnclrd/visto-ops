@@ -2,9 +2,9 @@ import type { RecipeIngredient } from "../types";
 
 const BASE_URL = import.meta.env.VITE_API_URL;
 
-export type DrinkBuildOperation = "create" | "update" | "delete";
+export type DrinkManageOperation = "create" | "update" | "delete";
 
-export interface DrinkBuildPayload {
+export interface DrinkManagePayload {
   id?: string;
   name?: string;
   category?: string;
@@ -14,7 +14,7 @@ export interface DrinkBuildPayload {
   isActive?: boolean;
 }
 
-interface DrinkBuildResponse {
+interface DrinkManageResponse {
   success: boolean;
   result?: any;
   error?: string;
@@ -23,11 +23,11 @@ interface DrinkBuildResponse {
 export async function manageDrink(
   clientId: string,
   storeId: string,
-  operation: DrinkBuildOperation,
+  operation: DrinkManageOperation,
   drinkId?: string,
-  data?: DrinkBuildPayload
+  data?: DrinkManagePayload
 ): Promise<any> {
-  const response = await fetch(`${BASE_URL}/drinkBuild`, {
+  const response = await fetch(`${BASE_URL}/drinkManage`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -41,7 +41,7 @@ export async function manageDrink(
     }),
   });
 
-  const resData: DrinkBuildResponse = await response.json();
+  const resData: DrinkManageResponse = await response.json();
 
   if (!response.ok || !resData.success) {
     throw new Error(resData.error || `Failed to ${operation} drink`);

@@ -1,8 +1,8 @@
 import type { RecipeIngredientPayload } from "../../types";
 
-export type DrinkBuildOperation = "create" | "update" | "delete";
+export type DrinkManageOperation = "create" | "update" | "delete";
 
-export interface DrinkBuildDataPayload {
+export interface DrinkManageDataPayload {
   id?: string;
   name?: string;
   category?: string;
@@ -12,10 +12,10 @@ export interface DrinkBuildDataPayload {
   isActive?: boolean;
 }
 
-export interface DrinkBuildRequest {
+export interface DrinkManageRequest {
   clientId: string;
   storeId: string;
-  operation: DrinkBuildOperation;
+  operation: DrinkManageOperation;
   drinkId?: string;
-  data?: DrinkBuildDataPayload;
+  data?: DrinkManageDataPayload;
 }

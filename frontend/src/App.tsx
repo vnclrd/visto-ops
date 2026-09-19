@@ -3,7 +3,7 @@ import { LoginPage } from "./pages/Login";
 import { StoreSelectionPage } from "./pages/StoreSelection";
 import { PosTerminal } from "./pages/PosTerminal";
 import { OwnerDashboard } from "./pages/OwnerDashboard";
-import { OwnerGlobalDashboard } from "./pages/OwnerGlobalDashboard";
+import { OwnerGlobalDashboard } from "./pages/GlobalOwnerDashboard";
 import type { ClientAccount, StoreItem } from "./types";
 
 const ACCOUNT_KEY = "visto_client_account";

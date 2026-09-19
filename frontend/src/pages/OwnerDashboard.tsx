@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import type { ClientAccount, StoreItem } from "../types";
-import { ManageIngredientsPage } from "./ManageIngredients";
-import { BuildDrinkPage } from "./BuildDrink";
+import { ManageIngredientsPage } from "./IngredientsManage";
+import { DrinkBuildPage } from "./DrinkBuild";
 
 interface OwnerDashboardProps {
   account: ClientAccount;
@@ -17,7 +17,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
   onOpenGlobalDashboard,
 }) => {
   const storeCount = account.stores?.length || 0;
-  const [currentView, setCurrentView] = useState<"overview" | "ingredients" | "buildDrink">("overview");
+  const [currentView, setCurrentView] = useState<"overview" | "ingredients" | "DrinkBuild">("overview");
 
   const businessType = store.businessType || account.businessType || "fnb";
   const isFnB = businessType === "fnb";
@@ -34,9 +34,9 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
   }
 
   // Sub-view 2: Drink Builder Studio
-  if (currentView === "buildDrink") {
+  if (currentView === "DrinkBuild") {
     return (
-      <BuildDrinkPage
+      <DrinkBuildPage
         account={account}
         store={store}
         onBack={() => setCurrentView("overview")}
@@ -135,7 +135,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                     📦
                   </div>
                   <h3 className="text-lg font-semibold text-neutral-100 group-hover:text-emerald-400 transition">
-                    Update Ingredients & Supplies
+                    Manage Ingredients & Supplies
                   </h3>
                   <p className="text-xs text-neutral-400 mt-1">
                     Adjust current raw stock levels, set units, and manage reorder alerts.
@@ -148,7 +148,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
             )}
 
             <button
-              onClick={() => setCurrentView("buildDrink")}
+              onClick={() => setCurrentView("DrinkBuild")}
               className="p-6 bg-neutral-900/80 hover:bg-neutral-900 border border-neutral-800 hover:border-emerald-500/50 rounded-2xl text-left transition flex items-center justify-between group shadow-lg active:scale-[0.99]"
             >
               <div>
@@ -156,7 +156,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                   {isFnB ? "☕" : "🏷️"}
                 </div>
                 <h3 className="text-lg font-semibold text-neutral-100 group-hover:text-emerald-400 transition">
-                  {isFnB ? "Build a Drink" : "Manage Products"}
+                  {isFnB ? "Manage Drinks" : "Manage Products"}
                 </h3>
                 <p className="text-xs text-neutral-400 mt-1">
                   {isFnB

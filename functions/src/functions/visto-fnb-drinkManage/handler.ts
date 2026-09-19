@@ -1,9 +1,9 @@
 import { onRequest } from "firebase-functions/v2/https";
-import type { DrinkBuildRequest } from "./request";
-import { drinkBuildAction } from "./action";
+import type { DrinkManageRequest } from "./request";
+import { drinkManageAction } from "./action";
 import { DrinkMiddleware } from "../../middlewares/DrinkMiddleware";
 
-export const drinkBuild = onRequest(
+export const drinkManage = onRequest(
   { cors: true, region: "asia-southeast1" },
   async (req, res) => {
     if (req.method !== "POST") {
@@ -12,8 +12,8 @@ export const drinkBuild = onRequest(
     }
 
     try {
-      const payload = req.body as DrinkBuildRequest;
-      const result = await drinkBuildAction(payload);
+      const payload = req.body as DrinkManageRequest;
+      const result = await drinkManageAction(payload);
 
       res.status(200).json({
         success: true,
