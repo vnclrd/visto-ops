@@ -81,3 +81,23 @@ export interface OrderRecord { // visto-orderProcess
   dateKey: string;
   createdAt: string;
 }
+
+export interface StoreMetrics { // visto-metricsGet
+  storeId: string;
+  storeName: string;
+  todaySales: number;
+  todayOrders: number;
+  totalSales: number;
+  totalOrders: number;
+  isActive: boolean;
+}
+
+export interface MetricsGetResponse { // visto-metricsGet
+  todaySales: number;
+  todayOrders: number;
+  totalSales: number;
+  totalOrders: number;
+  activeBranchesCount?: number;
+  totalBranchesCount?: number;
+  stores?: StoreMetrics[];
+}

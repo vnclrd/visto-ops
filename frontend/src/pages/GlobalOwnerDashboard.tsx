@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import type { ClientAccount, StoreItem } from "../types";
+import { fetchMetrics, type MetricsResult } from "../services/metricApi";
 
 interface OwnerGlobalDashboardProps {
   account: ClientAccount;
@@ -15,19 +16,38 @@ export const OwnerGlobalDashboard: React.FC<OwnerGlobalDashboardProps> = ({
   onSelectStore,
 }) => {
   const rawStores = account.stores || [];
-  
-  // Dynamic Aggregate Metrics
-  const activeBranchesCount = rawStores.filter((s) => s.isActive !== false).length;
 
-  const aggregateRevenue = rawStores.reduce(
-    (acc, s: any) => acc + (Number(s.todaySales) || 0),
-    0
-  );
+  const [metrics, setMetrics] = useState<MetricsResult | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
-  const aggregateOrders = rawStores.reduce(
-    (acc, s: any) => acc + (Number(s.todayOrders) || 0),
-    0
-  );
+  const loadGlobalMetrics = async () => {
+    setIsLoading(true);
+    setFetchError(null);
+    try {
+      const data = await fetchMetrics(account.id);
+      setMetrics(data);
+    } catch (err: any) {
+      setFetchError(err.message || "Failed to load global metrics");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadGlobalMetrics();
+  }, [account.id]);
+
+  // Aggregate Metrics derived from API response or fallback calculation
+  const aggregateRevenue = metrics
+    ? metrics.todaySales
+    : rawStores.reduce((acc, s: any) => acc + (Number(s.todaySales) || 0), 0);
+
+  const aggregateOrders = metrics
+    ? metrics.todayOrders
+    : rawStores.reduce((acc, s: any) => acc + (Number(s.todayOrders) || 0), 0);
+
+  const activeBranchesCount = metrics?.activeBranchesCount ?? rawStores.filter((s) => s.isActive !== false).length;
 
   // Sort stores: active first, then oldest createdAt ascending, inactive at the bottom
   const sortedStores = [...rawStores].sort((a, b) => {
@@ -65,12 +85,28 @@ export const OwnerGlobalDashboard: React.FC<OwnerGlobalDashboardProps> = ({
 
       {/* Global Metrics Content */}
       <main className="flex-1 p-8 max-w-6xl mx-auto w-full">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white tracking-wide">Consolidated Performance</h1>
-          <p className="text-sm text-neutral-400">
-            Owner: <span className="text-emerald-400 font-semibold">{account.owner || account.name}</span>
-          </p>
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <h1 className="text-2xl font-bold text-white tracking-wide">Consolidated Performance</h1>
+            <p className="text-sm text-neutral-400">
+              Owner: <span className="text-emerald-400 font-semibold">{account.owner || account.name}</span>
+            </p>
+          </div>
+
+          <button
+            onClick={loadGlobalMetrics}
+            disabled={isLoading}
+            className="self-start sm:self-auto px-3 py-1.5 rounded bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 text-xs text-neutral-300 transition"
+          >
+            {isLoading ? "Refreshing..." : "↻ Refresh Data"}
+          </button>
         </div>
+
+        {fetchError && (
+          <div className="mb-6 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-400">
+            {fetchError}
+          </div>
+        )}
 
         {/* Aggregate KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -79,7 +115,7 @@ export const OwnerGlobalDashboard: React.FC<OwnerGlobalDashboardProps> = ({
               Total Revenue (All Stores)
             </p>
             <p className="text-3xl font-bold text-emerald-400 mt-2">
-              ₱{aggregateRevenue.toFixed(2)}
+              {isLoading ? "..." : `₱${aggregateRevenue.toFixed(2)}`}
             </p>
             <p className="text-xs text-neutral-500 mt-1">Aggregated across all branches</p>
           </div>
@@ -88,7 +124,9 @@ export const OwnerGlobalDashboard: React.FC<OwnerGlobalDashboardProps> = ({
             <p className="text-xs text-neutral-400 uppercase font-semibold tracking-wider">
               Combined Orders
             </p>
-            <p className="text-3xl font-bold text-white mt-2">{aggregateOrders}</p>
+            <p className="text-3xl font-bold text-white mt-2">
+              {isLoading ? "..." : aggregateOrders}
+            </p>
             <p className="text-xs text-neutral-500 mt-1">All branch transactions</p>
           </div>
 
@@ -109,8 +147,15 @@ export const OwnerGlobalDashboard: React.FC<OwnerGlobalDashboardProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {sortedStores.map((storeItem) => {
             const isActive = storeItem.isActive !== false;
-            const branchTodaySales = (storeItem as any).todaySales || 0;
-            const branchTodayOrders = (storeItem as any).todayOrders || 0;
+
+            // Resolve real-time numbers from API if available, else fall back to local store record
+            const liveStoreMetric = metrics?.stores?.find((m) => m.storeId === storeItem.id);
+            const branchTodaySales = liveStoreMetric
+              ? liveStoreMetric.todaySales
+              : (storeItem as any).todaySales || 0;
+            const branchTodayOrders = liveStoreMetric
+              ? liveStoreMetric.todayOrders
+              : (storeItem as any).todayOrders || 0;
 
             return (
               <div
@@ -145,13 +190,13 @@ export const OwnerGlobalDashboard: React.FC<OwnerGlobalDashboardProps> = ({
                     <div className="flex justify-between">
                       <span>Today's Sales:</span>
                       <span className={isActive ? "text-white font-medium" : "text-neutral-500"}>
-                        ₱{Number(branchTodaySales).toFixed(2)}
+                        {isLoading ? "..." : `₱${Number(branchTodaySales).toFixed(2)}`}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span>Transactions:</span>
                       <span className={isActive ? "text-white font-medium" : "text-neutral-500"}>
-                        {branchTodayOrders}
+                        {isLoading ? "..." : branchTodayOrders}
                       </span>
                     </div>
                   </div>

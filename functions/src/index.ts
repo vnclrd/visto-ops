@@ -14,3 +14,5 @@ export { drinkManage } from './functions/visto-fnb-drinkManage/handler';
 export { catalogGet } from './functions/visto-catalogGet/handler';
 
 export { orderProcess } from './functions/visto-orderProcess/handler';
+
+export { metricsGet } from "./functions/visto-metricsGet/handler";
