@@ -1,45 +1,7 @@
-import React, { useState } from 'react';
-import type { ClientAccount, StoreItem, CatalogItem, CartItem } from '../types';
+import React, { useState, useEffect } from 'react';
+import type { ClientAccount, StoreItem, MenuItemRecord, CartItem } from '../types';
 import { verifyOwnerPin } from '../services/authApi';
-
-// Mock catalog items for frontend preview
-const MOCK_CATALOG: CatalogItem[] = [
-  {
-    id: '1',
-    name: 'Item 1',
-    category: 'Drink',
-    price: 0,
-    isAvailable: true,
-  },
-  {
-    id: '2',
-    name: 'Item 2',
-    category: 'Drink',
-    price: 0,
-    isAvailable: true,
-  },
-  {
-    id: '3',
-    name: 'Item 3',
-    category: 'Drink',
-    price: 0,
-    isAvailable: true,
-  },
-  {
-    id: '4',
-    name: 'Item 4',
-    category: 'Food',
-    price: 0,
-    isAvailable: true,
-  },
-  {
-    id: '5',
-    name: 'Item 5',
-    category: 'Food',
-    price: 0,
-    isAvailable: true,
-  },
-];
+import { fetchCatalog } from '../services/catalogApi';
 
 interface PosTerminalProps {
   account: ClientAccount;
@@ -56,7 +18,10 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
   onSwitchStore,
   onOpenOwnerDashboard,
 }) => {
-  const [catalog] = useState<CatalogItem[]>(MOCK_CATALOG);
+  const [catalog, setCatalog] = useState<MenuItemRecord[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [cart, setCart] = useState<CartItem[]>([]);
 
@@ -65,9 +30,26 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
   const [enteredPin, setEnteredPin] = useState<string>('');
   const [pinError, setPinError] = useState<string | null>(null);
 
+  const loadStoreCatalog = async () => {
+    setIsLoading(true);
+    setFetchError(null);
+    try {
+      const items = await fetchCatalog(account.id, store.id);
+      setCatalog(items.filter((item) => item.isActive !== false));
+    } catch (err: any) {
+      setFetchError(err.message || 'Failed to fetch catalog items');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadStoreCatalog();
+  }, [account.id, store.id]);
+
   const categories = [
     'All',
-    ...Array.from(new Set(catalog.map((i) => i.category))),
+    ...Array.from(new Set(catalog.map((i) => i.category).filter(Boolean))),
   ];
 
   const filteredItems =
@@ -75,7 +57,7 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
       ? catalog
       : catalog.filter((i) => i.category === selectedCategory);
 
-  const addToCart = (item: CatalogItem) => {
+  const addToCart = (item: MenuItemRecord) => {
     setCart((prev) => {
       const existing = prev.find((ci) => ci.id === item.id);
       if (existing) {
@@ -83,7 +65,17 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
           ci.id === item.id ? { ...ci, quantity: ci.quantity + 1 } : ci,
         );
       }
-      return [...prev, { ...item, quantity: 1 }];
+      return [
+        ...prev,
+        {
+          id: item.id,
+          name: item.name,
+          category: item.category,
+          price: item.price,
+          isAvailable: item.isActive,
+          quantity: 1,
+        },
+      ];
     });
   };
 
@@ -140,7 +132,6 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
         </div>
 
         <div className='flex items-center gap-3 text-sm'>
-          {/* Owner Dashboard Trigger */}
           <button
             onClick={() => {
               setPinError(null);
@@ -166,7 +157,7 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
         </div>
       </header>
 
-      {/* Main Workspace: Left Side Panel + Right Main Panel */}
+      {/* Main Workspace */}
       <div className='flex flex-1 overflow-hidden'>
         {/* 2. Side Panel (Left): Cart / Current Order */}
         <aside className='w-80 border-r border-neutral-800 bg-neutral-950 flex flex-col justify-between p-5'>
@@ -191,7 +182,7 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
                         {item.name}
                       </p>
                       <p className='text-xs text-neutral-400'>
-                        ₱{item.price} × {item.quantity}
+                        ₱{item.price.toFixed(2)} × {item.quantity}
                       </p>
                     </div>
                     <div className='flex items-center gap-2'>
@@ -255,32 +246,52 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
 
           {/* Items Grid */}
           <div className='flex-1 overflow-y-auto'>
-            <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4'>
-              {filteredItems.map((item) => (
+            {isLoading ? (
+              <div className='flex items-center justify-center h-48 text-neutral-400 text-sm'>
+                Loading menu catalog...
+              </div>
+            ) : fetchError ? (
+              <div className='p-6 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm rounded-xl text-center'>
+                {fetchError}
                 <button
-                  key={item.id}
-                  onClick={() => addToCart(item)}
-                  className='p-4 bg-neutral-800/60 hover:bg-neutral-800 border border-neutral-700 rounded-xl flex flex-col justify-between text-left transition h-32 active:scale-95'
+                  onClick={loadStoreCatalog}
+                  className='block mx-auto mt-2 text-emerald-400 hover:underline'
                 >
-                  <div>
-                    <h4 className='font-semibold text-neutral-100'>
-                      {item.name}
-                    </h4>
-                    <p className='text-xs text-neutral-400 mt-1'>
-                      {item.category}
-                    </p>
-                  </div>
-                  <span className='font-medium text-emerald-400'>
-                    ₱{item.price.toFixed(2)}
-                  </span>
+                  Retry Loading
                 </button>
-              ))}
-            </div>
+              </div>
+            ) : filteredItems.length === 0 ? (
+              <div className='flex items-center justify-center h-48 text-neutral-500 text-sm'>
+                No items published in this category yet.
+              </div>
+            ) : (
+              <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4'>
+                {filteredItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => addToCart(item)}
+                    className='p-4 bg-neutral-800/60 hover:bg-neutral-800 border border-neutral-700 rounded-xl flex flex-col justify-between text-left transition h-32 active:scale-95'
+                  >
+                    <div>
+                      <h4 className='font-semibold text-neutral-100 line-clamp-2'>
+                        {item.name}
+                      </h4>
+                      <p className='text-xs text-neutral-400 mt-1'>
+                        {item.category}
+                      </p>
+                    </div>
+                    <span className='font-medium text-emerald-400'>
+                      ₱{item.price.toFixed(2)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </main>
       </div>
 
-      {/* PIN Verification Modal */}
+      {/* PIN Modal */}
       {showPinModal && (
         <div className='fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4'>
           <div className='bg-neutral-900 border border-neutral-800 rounded-xl max-w-sm w-full p-6 shadow-xl'>

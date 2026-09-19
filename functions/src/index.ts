@@ -10,3 +10,5 @@ export { ingredientsGet } from './functions/visto-fnb-ingredientsGet/handler';
 export { ingredientsManage } from './functions/visto-fnb-ingredientsManage/handler';
 
 export { drinkBuild } from "./functions/visto-fnb-drinkBuild/handler";
+
+export { catalogGet } from "./functions/visto-catalogGet/handler";
