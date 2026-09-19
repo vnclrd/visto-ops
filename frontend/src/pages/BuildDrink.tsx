@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import type { ClientAccount, StoreItem, IngredientRecord, RecipeIngredient } from "../types";
 import { fetchIngredients } from "../services/ingredientApi";
+import { manageDrink } from "../services/drinkApi";
 
 interface BuildDrinkProps {
   account: ClientAccount;
@@ -26,6 +27,10 @@ export const BuildDrinkPage: React.FC<BuildDrinkProps> = ({
   const [selectedIngredientId, setSelectedIngredientId] = useState("");
   const [ingredientAmount, setIngredientAmount] = useState("");
   const [recipe, setRecipe] = useState<RecipeIngredient[]>([]);
+
+  // Submission State
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadIngredients = async () => {
@@ -93,21 +98,34 @@ export const BuildDrinkPage: React.FC<BuildDrinkProps> = ({
   const grossProfit = retailPriceNum - totalRecipeCost;
   const profitMargin = retailPriceNum > 0 ? (grossProfit / retailPriceNum) * 100 : 0;
 
-  const handleSaveDrink = (e: React.FormEvent) => {
+  const handleSaveDrink = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!drinkName.trim() || retailPriceNum <= 0 || recipe.length === 0) return;
+    setSubmitError(null);
 
-    // Ready for backend integration
-    console.log("New Drink Payload:", {
-      name: drinkName.trim(),
-      category: drinkCategory,
-      price: retailPriceNum,
-      cost: totalRecipeCost,
-      recipe,
-      isActive: true,
-    });
+    if (!drinkName.trim() || retailPriceNum <= 0 || recipe.length === 0) {
+      setSubmitError("Please provide a name, a valid price, and at least one ingredient.");
+      return;
+    }
 
-    onBack();
+    setIsSubmitting(true);
+
+    try {
+      await manageDrink(account.id, store.id, "create", undefined, {
+        name: drinkName.trim(),
+        category: drinkCategory,
+        price: retailPriceNum,
+        cost: totalRecipeCost,
+        recipe,
+        isActive: true,
+      });
+
+      // Navigate back to overview upon successful creation
+      onBack();
+    } catch (err: any) {
+      setSubmitError(err.message || "Failed to publish drink to catalog");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -370,14 +388,20 @@ export const BuildDrinkPage: React.FC<BuildDrinkProps> = ({
             </div>
           </div>
 
+          {submitError && (
+            <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs text-rose-400">
+              {submitError}
+            </div>
+          )}
+
           {/* Submission Action */}
           <button
             type="button"
             onClick={handleSaveDrink}
-            disabled={!drinkName.trim() || retailPriceNum <= 0 || recipe.length === 0}
+            disabled={isSubmitting || !drinkName.trim() || retailPriceNum <= 0 || recipe.length === 0}
             className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs uppercase tracking-wider rounded-xl transition shadow-lg disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.99]"
           >
-            Publish to Store Menu &rarr;
+            {isSubmitting ? "Publishing Drink..." : "Publish to Store Menu \u2192"}
           </button>
         </div>
       </main>
