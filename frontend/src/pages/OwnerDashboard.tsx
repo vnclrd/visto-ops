@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import type { ClientAccount, StoreItem } from "../types";
 import { ManageIngredientsPage } from "./ManageIngredients";
+import { BuildDrinkPage } from "./BuildDrink";
 
 interface OwnerDashboardProps {
   account: ClientAccount;
@@ -18,10 +19,10 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
   const storeCount = account.stores?.length || 0;
   const [currentView, setCurrentView] = useState<"overview" | "ingredients" | "buildDrink">("overview");
 
-  // Store-level override falls back to client account level, defaulting to "fnb"
   const businessType = store.businessType || account.businessType || "fnb";
   const isFnB = businessType === "fnb";
 
+  // Sub-view 1: Ingredients Management
   if (currentView === "ingredients") {
     return (
       <ManageIngredientsPage
@@ -32,6 +33,18 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
     );
   }
 
+  // Sub-view 2: Drink Builder Studio
+  if (currentView === "buildDrink") {
+    return (
+      <BuildDrinkPage
+        account={account}
+        store={store}
+        onBack={() => setCurrentView("overview")}
+      />
+    );
+  }
+
+  // Default: Overview Dashboard View
   return (
     <div className="min-h-screen bg-neutral-950 text-white flex flex-col select-none">
       {/* Header */}
@@ -112,7 +125,6 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
           </h2>
 
           <div className={`grid gap-6 ${isFnB ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"}`}>
-            {/* Action 1: Update Ingredients (Only rendered if businessType === "fnb") */}
             {isFnB && (
               <button
                 onClick={() => setCurrentView("ingredients")}
@@ -135,7 +147,6 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
               </button>
             )}
 
-            {/* Action 2: Dynamic Product Creator */}
             <button
               onClick={() => setCurrentView("buildDrink")}
               className="p-6 bg-neutral-900/80 hover:bg-neutral-900 border border-neutral-800 hover:border-emerald-500/50 rounded-2xl text-left transition flex items-center justify-between group shadow-lg active:scale-[0.99]"

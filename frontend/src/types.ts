@@ -39,7 +39,7 @@ export interface LoginResponse { // visto-accountLogin
   error?: string;
 }
 
-export interface IngredientRecord { // visto-ingredientGet
+export interface IngredientRecord { // visto-fnb-ingredientGet
   id: string;
   name: string;
   category: "Dairy" | "Beans" | "Syrups" | "Powders" | "Packaging" | string;
@@ -51,6 +51,27 @@ export interface IngredientRecord { // visto-ingredientGet
     packageSize: number;
   };
   costPerUnit: number;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface RecipeIngredient { // visto-fnb-drinkBuild
+  ingredientId: string;
+  name: string;
+  unit: string;
+  amount: number;
+  costPerUnit: number;
+  totalCost: number;
+}
+
+export interface MenuItemRecord { // visto-fnb-drinkBuild
+  id: string;
+  name: string;
+  category: string;
+  price: number;
+  cost: number;
+  recipe: RecipeIngredient[];
   isActive: boolean;
   createdAt?: string;
   updatedAt?: string;
