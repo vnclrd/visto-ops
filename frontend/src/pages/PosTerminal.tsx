@@ -3,6 +3,8 @@ import type { ClientAccount, StoreItem, MenuItemRecord, CartItem } from '../type
 import { verifyOwnerPin } from '../services/authApi';
 import { fetchCatalog } from '../services/catalogApi';
 
+const DEFAULT_UPSIZE_FEE = 20;
+
 interface PosTerminalProps {
   account: ClientAccount;
   store: StoreItem;
@@ -24,6 +26,11 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
 
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [cart, setCart] = useState<CartItem[]>([]);
+
+  // Drink Customization Modal State
+  const [customizingItem, setCustomizingItem] = useState<MenuItemRecord | null>(null);
+  const [selectedTemp, setSelectedTemp] = useState<'hot' | 'iced'>('iced');
+  const [selectedSize, setSelectedSize] = useState<'regular' | 'upsized'>('regular');
 
   // PIN Modal State
   const [showPinModal, setShowPinModal] = useState<boolean>(false);
@@ -57,26 +64,46 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
       ? catalog
       : catalog.filter((i) => i.category === selectedCategory);
 
-  const addToCart = (item: MenuItemRecord) => {
+  // Trigger modal when an item is tapped
+  const handleItemClick = (item: MenuItemRecord) => {
+    setCustomizingItem(item);
+    setSelectedTemp('iced');
+    setSelectedSize('regular');
+  };
+
+  // Add customized item into cart
+  const handleConfirmAdd = () => {
+    if (!customizingItem) return;
+
+    const upcharge = selectedSize === 'upsized' ? DEFAULT_UPSIZE_FEE : 0;
+    const finalPrice = customizingItem.price + upcharge;
+    const cartItemId = `${customizingItem.id}_${selectedTemp}_${selectedSize}`;
+
     setCart((prev) => {
-      const existing = prev.find((ci) => ci.id === item.id);
+      const existing = prev.find((ci) => ci.id === cartItemId);
       if (existing) {
         return prev.map((ci) =>
-          ci.id === item.id ? { ...ci, quantity: ci.quantity + 1 } : ci,
+          ci.id === cartItemId ? { ...ci, quantity: ci.quantity + 1 } : ci,
         );
       }
-      return [
-        ...prev,
-        {
-          id: item.id,
-          name: item.name,
-          category: item.category,
-          price: item.price,
-          isAvailable: item.isActive,
-          quantity: 1,
-        },
-      ];
+
+      const newCartEntry: CartItem = {
+        id: cartItemId,
+        catalogId: customizingItem.id,
+        name: customizingItem.name,
+        category: customizingItem.category,
+        price: finalPrice,
+        basePrice: customizingItem.price,
+        temperature: selectedTemp,
+        size: selectedSize,
+        upcharge,
+        quantity: 1,
+      };
+
+      return [...prev, newCartEntry];
     });
+
+    setCustomizingItem(null);
   };
 
   const updateQuantity = (id: string, delta: number) => {
@@ -175,20 +202,25 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
                 {cart.map((item) => (
                   <div
                     key={item.id}
-                    className='flex items-center justify-between text-sm py-2 border-b border-neutral-800/50'
+                    className='flex items-center justify-between text-sm py-2.5 border-b border-neutral-800/60'
                   >
-                    <div>
-                      <p className='font-medium text-neutral-200'>
+                    <div className='pr-2'>
+                      <p className='font-medium text-neutral-100'>
                         {item.name}
                       </p>
-                      <p className='text-xs text-neutral-400'>
+                      <p className='text-[11px] text-emerald-400 uppercase tracking-wide font-medium mt-0.5'>
+                        {item.temperature} • {item.size}
+                        {item.upcharge > 0 && ` (+₱${item.upcharge})`}
+                      </p>
+                      <p className='text-xs text-neutral-400 mt-0.5'>
                         ₱{item.price.toFixed(2)} × {item.quantity}
                       </p>
                     </div>
-                    <div className='flex items-center gap-2'>
+
+                    <div className='flex items-center gap-2 flex-shrink-0'>
                       <button
                         onClick={() => updateQuantity(item.id, -1)}
-                        className='w-6 h-6 flex items-center justify-center bg-neutral-800 hover:bg-neutral-700 rounded text-neutral-300'
+                        className='w-6 h-6 flex items-center justify-center bg-neutral-800 hover:bg-neutral-700 rounded text-neutral-300 transition'
                       >
                         -
                       </button>
@@ -197,7 +229,7 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
                       </span>
                       <button
                         onClick={() => updateQuantity(item.id, 1)}
-                        className='w-6 h-6 flex items-center justify-center bg-neutral-800 hover:bg-neutral-700 rounded text-neutral-300'
+                        className='w-6 h-6 flex items-center justify-center bg-neutral-800 hover:bg-neutral-700 rounded text-neutral-300 transition'
                       >
                         +
                       </button>
@@ -269,7 +301,7 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
                 {filteredItems.map((item) => (
                   <button
                     key={item.id}
-                    onClick={() => addToCart(item)}
+                    onClick={() => handleItemClick(item)}
                     className='p-4 bg-neutral-800/60 hover:bg-neutral-800 border border-neutral-700 rounded-xl flex flex-col justify-between text-left transition h-32 active:scale-95'
                   >
                     <div>
@@ -290,6 +322,117 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
           </div>
         </main>
       </div>
+
+      {/* Drink Customization Modal */}
+      {customizingItem && (
+        <div className='fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50 p-4'>
+          <div className='bg-neutral-900 border border-neutral-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-5'>
+            <div>
+              <h3 className='text-lg font-bold text-white'>
+                {customizingItem.name}
+              </h3>
+              <p className='text-xs text-neutral-400 mt-0.5'>
+                Base: ₱{customizingItem.price.toFixed(2)} • {customizingItem.category}
+              </p>
+            </div>
+
+            {/* Temperature Option */}
+            <div>
+              <label className='block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-2'>
+                Temperature
+              </label>
+              <div className='grid grid-cols-2 gap-3'>
+                <button
+                  type='button'
+                  onClick={() => setSelectedTemp('iced')}
+                  className={`py-2.5 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition ${
+                    selectedTemp === 'iced'
+                      ? 'bg-blue-500/10 border-blue-500 text-blue-400'
+                      : 'bg-neutral-950 border-neutral-800 text-neutral-400 hover:border-neutral-700'
+                  }`}
+                >
+                  ❄️ Iced
+                </button>
+                <button
+                  type='button'
+                  onClick={() => setSelectedTemp('hot')}
+                  className={`py-2.5 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1.5 transition ${
+                    selectedTemp === 'hot'
+                      ? 'bg-amber-500/10 border-amber-500 text-amber-400'
+                      : 'bg-neutral-950 border-neutral-800 text-neutral-400 hover:border-neutral-700'
+                  }`}
+                >
+                  ♨️ Hot
+                </button>
+              </div>
+            </div>
+
+            {/* Size Option */}
+            <div>
+              <label className='block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-2'>
+                Size
+              </label>
+              <div className='grid grid-cols-2 gap-3'>
+                <button
+                  type='button'
+                  onClick={() => setSelectedSize('regular')}
+                  className={`py-2.5 px-3 rounded-xl border text-xs font-semibold flex flex-col items-center justify-center transition ${
+                    selectedSize === 'regular'
+                      ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400'
+                      : 'bg-neutral-950 border-neutral-800 text-neutral-400 hover:border-neutral-700'
+                  }`}
+                >
+                  <span>Regular (16oz)</span>
+                  <span className='text-[10px] font-normal text-neutral-500 mt-0.5'>Included</span>
+                </button>
+                <button
+                  type='button'
+                  onClick={() => setSelectedSize('upsized')}
+                  className={`py-2.5 px-3 rounded-xl border text-xs font-semibold flex flex-col items-center justify-center transition ${
+                    selectedSize === 'upsized'
+                      ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400'
+                      : 'bg-neutral-950 border-neutral-800 text-neutral-400 hover:border-neutral-700'
+                  }`}
+                >
+                  <span>Upsized (22oz)</span>
+                  <span className='text-[10px] font-medium text-emerald-400 mt-0.5'>+₱{DEFAULT_UPSIZE_FEE}.00</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Footer Summary & Add to Cart */}
+            <div className='pt-2 border-t border-neutral-800 flex items-center justify-between'>
+              <div>
+                <span className='text-[11px] text-neutral-400 block'>Item Total</span>
+                <span className='text-lg font-bold text-white'>
+                  ₱
+                  {(
+                    customizingItem.price +
+                    (selectedSize === 'upsized' ? DEFAULT_UPSIZE_FEE : 0)
+                  ).toFixed(2)}
+                </span>
+              </div>
+
+              <div className='flex gap-2'>
+                <button
+                  type='button'
+                  onClick={() => setCustomizingItem(null)}
+                  className='px-3 py-2 text-xs bg-neutral-800 hover:bg-neutral-700 rounded-xl text-neutral-300 font-medium transition'
+                >
+                  Cancel
+                </button>
+                <button
+                  type='button'
+                  onClick={handleConfirmAdd}
+                  className='px-4 py-2 text-xs bg-emerald-500 hover:bg-emerald-400 rounded-xl text-black font-bold uppercase tracking-wider transition'
+                >
+                  Add to Cart
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* PIN Modal */}
       {showPinModal && (

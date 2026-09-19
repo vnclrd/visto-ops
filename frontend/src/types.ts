@@ -24,7 +24,16 @@ export interface CatalogItem {
   isAvailable: boolean;
 }
 
-export interface CartItem extends CatalogItem {
+export interface CartItem {
+  id: string;
+  catalogId: string;
+  name: string;
+  category: string;
+  price: number;
+  basePrice: number;
+  temperature: "hot" | "iced";
+  size: "regular" | "upsized";
+  upcharge: number;
   quantity: number;
 }
 
