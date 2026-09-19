@@ -22,6 +22,10 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
   const businessType = store.businessType || account.businessType || "fnb";
   const isFnB = businessType === "fnb";
 
+  // Dynamic Store Metrics
+  const grossSales = (store as any).todaySales || 0;
+  const completedOrders = (store as any).todayOrders || 0;
+
   // Sub-view 1: Ingredients Management
   if (currentView === "ingredients") {
     return (
@@ -95,7 +99,9 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
             <p className="text-xs text-neutral-400 uppercase font-semibold tracking-wider">
               Today's Gross Sales
             </p>
-            <p className="text-3xl font-bold text-emerald-400 mt-2">₱0.00</p>
+            <p className="text-3xl font-bold text-emerald-400 mt-2">
+              ₱{Number(grossSales).toFixed(2)}
+            </p>
             <p className="text-xs text-neutral-500 mt-1">Updated in real-time</p>
           </div>
 
@@ -103,7 +109,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
             <p className="text-xs text-neutral-400 uppercase font-semibold tracking-wider">
               Transactions
             </p>
-            <p className="text-3xl font-bold text-white mt-2">0</p>
+            <p className="text-3xl font-bold text-white mt-2">{completedOrders}</p>
             <p className="text-xs text-neutral-500 mt-1">Completed orders</p>
           </div>
 

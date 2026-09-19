@@ -16,8 +16,18 @@ export const OwnerGlobalDashboard: React.FC<OwnerGlobalDashboardProps> = ({
 }) => {
   const rawStores = account.stores || [];
   
-  // Calculate true active branches count dynamically
+  // Dynamic Aggregate Metrics
   const activeBranchesCount = rawStores.filter((s) => s.isActive !== false).length;
+
+  const aggregateRevenue = rawStores.reduce(
+    (acc, s: any) => acc + (Number(s.todaySales) || 0),
+    0
+  );
+
+  const aggregateOrders = rawStores.reduce(
+    (acc, s: any) => acc + (Number(s.todayOrders) || 0),
+    0
+  );
 
   // Sort stores: active first, then oldest createdAt ascending, inactive at the bottom
   const sortedStores = [...rawStores].sort((a, b) => {
@@ -68,7 +78,9 @@ export const OwnerGlobalDashboard: React.FC<OwnerGlobalDashboardProps> = ({
             <p className="text-xs text-neutral-400 uppercase font-semibold tracking-wider">
               Total Revenue (All Stores)
             </p>
-            <p className="text-3xl font-bold text-emerald-400 mt-2">₱0.00</p>
+            <p className="text-3xl font-bold text-emerald-400 mt-2">
+              ₱{aggregateRevenue.toFixed(2)}
+            </p>
             <p className="text-xs text-neutral-500 mt-1">Aggregated across all branches</p>
           </div>
 
@@ -76,7 +88,7 @@ export const OwnerGlobalDashboard: React.FC<OwnerGlobalDashboardProps> = ({
             <p className="text-xs text-neutral-400 uppercase font-semibold tracking-wider">
               Combined Orders
             </p>
-            <p className="text-3xl font-bold text-white mt-2">0</p>
+            <p className="text-3xl font-bold text-white mt-2">{aggregateOrders}</p>
             <p className="text-xs text-neutral-500 mt-1">All branch transactions</p>
           </div>
 
@@ -95,12 +107,14 @@ export const OwnerGlobalDashboard: React.FC<OwnerGlobalDashboardProps> = ({
         {/* Store Comparison Grid */}
         <h2 className="text-lg font-semibold text-white mb-4">Branch Breakdown</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {sortedStores.map((store) => {
-            const isActive = store.isActive !== false;
+          {sortedStores.map((storeItem) => {
+            const isActive = storeItem.isActive !== false;
+            const branchTodaySales = (storeItem as any).todaySales || 0;
+            const branchTodayOrders = (storeItem as any).todayOrders || 0;
 
             return (
               <div
-                key={store.id}
+                key={storeItem.id}
                 className={`p-5 rounded-2xl border transition flex flex-col justify-between ${
                   isActive
                     ? "bg-neutral-900 border-neutral-800 shadow-md"
@@ -110,7 +124,7 @@ export const OwnerGlobalDashboard: React.FC<OwnerGlobalDashboardProps> = ({
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <h3 className={`font-semibold ${isActive ? "text-white" : "text-neutral-400"}`}>
-                      {store.name || store.id}
+                      {storeItem.name || storeItem.id}
                     </h3>
                     <span
                       className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded border ${
@@ -123,21 +137,21 @@ export const OwnerGlobalDashboard: React.FC<OwnerGlobalDashboardProps> = ({
                     </span>
                   </div>
 
-                  {store.location && (
-                    <p className="text-xs text-neutral-400 mb-3">{store.location}</p>
+                  {storeItem.location && (
+                    <p className="text-xs text-neutral-400 mb-3">{storeItem.location}</p>
                   )}
 
                   <div className="space-y-1 text-xs text-neutral-400 border-t border-neutral-800 pt-3">
                     <div className="flex justify-between">
                       <span>Today's Sales:</span>
                       <span className={isActive ? "text-white font-medium" : "text-neutral-500"}>
-                        ₱0.00
+                        ₱{Number(branchTodaySales).toFixed(2)}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span>Transactions:</span>
                       <span className={isActive ? "text-white font-medium" : "text-neutral-500"}>
-                        0
+                        {branchTodayOrders}
                       </span>
                     </div>
                   </div>
@@ -145,7 +159,7 @@ export const OwnerGlobalDashboard: React.FC<OwnerGlobalDashboardProps> = ({
 
                 {onSelectStore && (
                   <button
-                    onClick={() => isActive && onSelectStore(store)}
+                    onClick={() => isActive && onSelectStore(storeItem)}
                     disabled={!isActive}
                     className={`mt-4 w-full py-2 rounded-lg text-xs font-semibold transition ${
                       isActive

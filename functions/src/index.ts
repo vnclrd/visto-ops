@@ -12,3 +12,5 @@ export { ingredientsManage } from './functions/visto-fnb-ingredientsManage/handl
 export { drinkManage } from './functions/visto-fnb-drinkManage/handler';
 
 export { catalogGet } from './functions/visto-catalogGet/handler';
+
+export { orderProcess } from './functions/visto-orderProcess/handler';

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { ClientAccount, StoreItem, MenuItemRecord, CartItem } from '../types';
 import { verifyOwnerPin } from '../services/authApi';
 import { fetchCatalog } from '../services/catalogApi';
+import { processOrder } from '../services/orderApi';
 
 const DEFAULT_UPSIZE_FEE = 20;
 
@@ -26,6 +27,7 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
 
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [isProcessingOrder, setIsProcessingOrder] = useState<boolean>(false);
 
   // Drink Customization Modal State
   const [customizingItem, setCustomizingItem] = useState<MenuItemRecord | null>(null);
@@ -118,6 +120,27 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
         })
         .filter((item): item is CartItem => item !== null),
     );
+  };
+
+  const handleCheckout = async () => {
+    if (cart.length === 0 || isProcessingOrder) return;
+
+    setIsProcessingOrder(true);
+    try {
+      await processOrder(
+        account.id,
+        store.id,
+        cart,
+        totalAmount,
+        account.name
+      );
+      setCart([]);
+      alert(`Order processed successfully! Amount: ₱${totalAmount.toFixed(2)}`);
+    } catch (err: any) {
+      alert(err.message || 'Payment processing failed.');
+    } finally {
+      setIsProcessingOrder(false);
+    }
   };
 
   const handlePinSubmit = async (e: React.FormEvent) => {
@@ -249,10 +272,11 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
               </span>
             </div>
             <button
-              disabled={cart.length === 0}
+              disabled={cart.length === 0 || isProcessingOrder}
+              onClick={handleCheckout}
               className='w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-black font-semibold rounded-lg disabled:opacity-30 disabled:cursor-not-allowed transition'
             >
-              Charge ₱{totalAmount.toFixed(2)}
+              {isProcessingOrder ? 'Processing...' : `Charge ₱${totalAmount.toFixed(2)}`}
             </button>
           </div>
         </aside>

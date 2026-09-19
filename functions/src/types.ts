@@ -59,3 +59,25 @@ export interface MenuItemRecord { // visto-fnb-drinkBuild
   createdAt?: string;
   updatedAt?: string;
 }
+
+export interface CartOrderItem { // visto-orderProcess
+  id: string;
+  catalogId: string;
+  name: string;
+  category: string;
+  price: number;
+  basePrice: number;
+  temperature: "hot" | "iced";
+  size: "regular" | "upsized";
+  upcharge: number;
+  quantity: number;
+}
+
+export interface OrderRecord { // visto-orderProcess
+  id?: string;
+  items: CartOrderItem[];
+  totalAmount: number;
+  cashierName: string;
+  dateKey: string;
+  createdAt: string;
+}
