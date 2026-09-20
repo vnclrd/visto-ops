@@ -31,10 +31,10 @@ export interface CartItem {
   category: string;
   price: number;
   basePrice: number;
-  temperature: 'hot' | 'iced';
-  size: 'regular' | 'upsized';
-  upcharge: number;
   quantity: number;
+  temperature?: 'hot' | 'iced';
+  size?: 'regular' | 'upsized';
+  upcharge?: number;
 }
 
 export interface LoginPayload {

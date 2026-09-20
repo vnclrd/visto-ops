@@ -29,7 +29,12 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isProcessingOrder, setIsProcessingOrder] = useState<boolean>(false);
 
-  // Drink Customization Modal State
+  // Business Type & Emoji Presets
+  const businessType = store.businessType || account.businessType || 'cafe';
+  const isCafe = businessType === 'cafe';
+  const emojiConfig = getBusinessEmojiConfig(businessType);
+
+  // Drink Customization Modal State (Cafes Only)
   const [customizingItem, setCustomizingItem] = useState<MenuItemRecord | null>(null);
   const [selectedTemp, setSelectedTemp] = useState<'hot' | 'iced'>('iced');
   const [selectedSize, setSelectedSize] = useState<'regular' | 'upsized'>('regular');
@@ -61,14 +66,39 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
       ? catalog
       : catalog.filter((i) => i.category === selectedCategory);
 
-  // Trigger modal when an item is tapped
+  // Handle Item Tap
   const handleItemClick = (item: MenuItemRecord) => {
-    setCustomizingItem(item);
-    setSelectedTemp('iced');
-    setSelectedSize('regular');
+    if (isCafe) {
+      // Open temperature/upsize prompt for cafes
+      setCustomizingItem(item);
+      setSelectedTemp('iced');
+      setSelectedSize('regular');
+    } else {
+      // Add directly to cart for retail, restaurants, services
+      setCart((prev) => {
+        const existing = prev.find((ci) => ci.catalogId === item.id);
+        if (existing) {
+          return prev.map((ci) =>
+            ci.catalogId === item.id ? { ...ci, quantity: ci.quantity + 1 } : ci,
+          );
+        }
+
+        const newCartEntry: CartItem = {
+          id: item.id,
+          catalogId: item.id,
+          name: item.name,
+          category: item.category,
+          price: item.price,
+          basePrice: item.price,
+          quantity: 1,
+        };
+
+        return [...prev, newCartEntry];
+      });
+    }
   };
 
-  // Add customized item into cart
+  // Add customized item into cart (Cafes Only)
   const handleConfirmAdd = () => {
     if (!customizingItem) return;
 
@@ -207,10 +237,12 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
                       <p className='font-medium text-neutral-100'>
                         {item.name}
                       </p>
-                      <p className='text-[11px] text-emerald-400 uppercase tracking-wide font-medium mt-0.5'>
-                        {item.temperature} • {item.size}
-                        {item.upcharge > 0 && ` (+₱${item.upcharge})`}
-                      </p>
+                      {item.temperature && item.size && (
+                        <p className='text-[11px] text-emerald-400 uppercase tracking-wide font-medium mt-0.5'>
+                          {item.temperature} • {item.size}
+                          {item.upcharge && item.upcharge > 0 ? ` (+₱${item.upcharge})` : ''}
+                        </p>
+                      )}
                       <p className='text-xs text-neutral-400 mt-0.5'>
                         ₱{item.price.toFixed(2)} × {item.quantity}
                       </p>
@@ -300,16 +332,9 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
               <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4'>
                 {filteredItems.map((item) => {
                   const displayEmoji =
-                    (item as any).emoji ||
-                    (item.category === 'Frappe'
-                      ? '🥤'
-                      : item.category === 'Milk Tea'
-                      ? '🧋'
-                      : item.category === 'Matcha'
-                      ? '🍵'
-                      : item.category === 'Non-Coffee'
-                      ? '🍹'
-                      : '☕');
+                    item.emoji ||
+                    emojiConfig.categoryDefaults[item.category] ||
+                    emojiConfig.defaultEmoji;
 
                   return (
                     <button
@@ -345,8 +370,8 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
         </main>
       </div>
 
-      {/* Drink Customization Modal */}
-      {customizingItem && (
+      {/* Drink Customization Modal (Only mounted when customizingItem is set for cafes) */}
+      {isCafe && customizingItem && (
         <div className='fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50 p-4'>
           <div className='bg-neutral-900 border border-neutral-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-5'>
             <div>
