@@ -120,6 +120,7 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
   const [trackLiveStock, setTrackLiveStock] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Restock & Price Adjustment Modal State
   const [editingItem, setEditingItem] = useState<IngredientRecord | null>(null);
@@ -194,11 +195,6 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
       return;
     }
 
-    if (!newName.trim() || parsedSize <= 0) {
-      setFormError('Valid name and package size are required.');
-      return;
-    }
-
     const initialPacks = parseFloat(newInitialPacks) || 0;
     setIsSubmitting(true);
 
@@ -218,7 +214,7 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
         'create',
         undefined,
         {
-          name: newName.trim(),
+          name: trimmed,
           category: newCategory,
           unit: newUnit,
           currentStock,
@@ -248,6 +244,27 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
       setFormError(err.message || 'Failed to register item');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteIngredient = async (item: IngredientRecord) => {
+    if (!item.id) return;
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${item.name}"? This action cannot be undone.`,
+    );
+    if (!confirmed) return;
+
+    setDeletingId(item.id);
+    try {
+      await manageIngredient(account.id, store.id, 'delete', item.id);
+      setIngredients((prev) => prev.filter((ing) => ing.id !== item.id));
+      if (editingItem?.id === item.id) {
+        setEditingItem(null);
+      }
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete ingredient');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -299,7 +316,6 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
 
     try {
       if (isRawBasisItem) {
-        // Raw basis: update pricing without changing stock
         await manageIngredient(account.id, store.id, 'update', editingItem.id, {
           packageSpecs: {
             packagePrice: incomingPkgPrice,
@@ -323,7 +339,6 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
           ),
         );
       } else {
-        // Active inventory item: update stock and blended weighted cost
         await manageIngredient(account.id, store.id, 'update', editingItem.id, {
           currentStock: projectedTotalStock,
           packageSpecs: {
@@ -822,13 +837,22 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
                           {item.currentStock.toLocaleString()} {item.unit}
                         </td>
                       )}
-                      <td className='px-5 py-4 text-right'>
-                        <button
-                          onClick={() => openRestockModal(item)}
-                          className='px-3 py-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 hover:text-emerald-400 border border-neutral-700 rounded text-xs transition'
-                        >
-                          Restock / Cost
-                        </button>
+                      <td className='px-5 py-4 whitespace-nowrap text-right'>
+                        <div className='flex items-center justify-end gap-2'>
+                          <button
+                            onClick={() => openRestockModal(item)}
+                            className='px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 hover:text-emerald-400 border border-neutral-700 rounded-lg text-xs transition flex-shrink-0'
+                          >
+                            Restock / Cost
+                          </button>
+                          <button
+                            onClick={() => handleDeleteIngredient(item)}
+                            disabled={deletingId === item.id}
+                            className='px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-lg text-xs transition disabled:opacity-50 flex-shrink-0'
+                          >
+                            {deletingId === item.id ? 'Deleting...' : 'Delete'}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
