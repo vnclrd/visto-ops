@@ -810,52 +810,74 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
                   </tr>
                 </thead>
                 <tbody className='divide-y divide-neutral-800/60'>
-                  {filtered.map((item) => (
-                    <tr
-                      key={item.id}
-                      className='hover:bg-neutral-800/40 transition'
-                    >
-                      <td className='px-5 py-4 font-semibold text-neutral-200'>
-                        <div className='flex items-center gap-1.5'>
-                          {item.itemType === 'prepped' && <span>🥘</span>}
-                          {item.name}
-                        </div>
-                        <span className='text-[10px] text-neutral-500'>
-                          {item.category}{' '}
-                          {item.itemType ? `• ${item.itemType}` : ''}
-                        </span>
-                      </td>
-                      <td className='px-4 py-4 text-neutral-300'>
-                        ₱{(item.packageSpecs?.packagePrice ?? 0).toFixed(2)} /{' '}
-                        {item.packageSpecs?.packageSize ?? 0} {item.unit}
-                      </td>
-                      <td className='px-4 py-4 font-medium text-emerald-400'>
-                        ₱{item.costPerUnit.toFixed(4)} / {item.unit}
-                      </td>
-                      {(activeTab === 'activeStock' || !isRestaurant) && (
-                        <td className='px-4 py-4 text-white font-semibold'>
-                          {item.currentStock.toLocaleString()} {item.unit}
+                  {filtered.map((item) => {
+                    const isLowStock =
+                      item.reorderLevel !== undefined && item.reorderLevel > 0
+                        ? item.currentStock <= item.reorderLevel
+                        : item.currentStock <= 0;
+
+                    return (
+                      <tr
+                        key={item.id}
+                        className='hover:bg-neutral-800/40 transition'
+                      >
+                        <td className='px-5 py-4 font-semibold text-neutral-200'>
+                          <div className='flex items-center gap-1.5'>
+                            {item.itemType === 'prepped' && <span>🥘</span>}
+                            {item.name}
+                          </div>
+                          <span className='text-[10px] text-neutral-500'>
+                            {item.category}{' '}
+                            {item.itemType ? `• ${item.itemType}` : ''}
+                          </span>
                         </td>
-                      )}
-                      <td className='px-5 py-4 whitespace-nowrap text-right'>
-                        <div className='flex items-center justify-end gap-2'>
-                          <button
-                            onClick={() => openRestockModal(item)}
-                            className='px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 hover:text-emerald-400 border border-neutral-700 rounded-lg text-xs transition flex-shrink-0'
+                        <td className='px-4 py-4 text-neutral-300'>
+                          ₱{(item.packageSpecs?.packagePrice ?? 0).toFixed(2)} /{' '}
+                          {item.packageSpecs?.packageSize ?? 0} {item.unit}
+                        </td>
+                        <td className='px-4 py-4 font-medium text-emerald-400'>
+                          ₱{item.costPerUnit.toFixed(4)} / {item.unit}
+                        </td>
+                        {(activeTab === 'activeStock' || !isRestaurant) && (
+                          <td
+                            className={`px-4 py-4 font-semibold transition-colors ${
+                              isLowStock
+                                ? 'text-rose-400 font-bold'
+                                : 'text-white'
+                            }`}
                           >
-                            Restock / Cost
-                          </button>
-                          <button
-                            onClick={() => handleDeleteIngredient(item)}
-                            disabled={deletingId === item.id}
-                            className='px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-lg text-xs transition disabled:opacity-50 flex-shrink-0'
-                          >
-                            {deletingId === item.id ? 'Deleting...' : 'Delete'}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                            <div className='flex items-center gap-1.5'>
+                              <span>
+                                {item.currentStock.toLocaleString()} {item.unit}
+                              </span>
+                              {isLowStock && (
+                                <span className='text-[10px] px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 font-medium uppercase tracking-wider'>
+                                  Low
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                        )}
+                        <td className='px-5 py-4 whitespace-nowrap text-right'>
+                          <div className='flex items-center justify-end gap-2'>
+                            <button
+                              onClick={() => openRestockModal(item)}
+                              className='px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 hover:text-emerald-400 border border-neutral-700 rounded-lg text-xs transition flex-shrink-0'
+                            >
+                              Restock / Cost
+                            </button>
+                            <button
+                              onClick={() => handleDeleteIngredient(item)}
+                              disabled={deletingId === item.id}
+                              className='px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-lg text-xs transition disabled:opacity-50 flex-shrink-0'
+                            >
+                              {deletingId === item.id ? 'Deleting...' : 'Delete'}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             )}
