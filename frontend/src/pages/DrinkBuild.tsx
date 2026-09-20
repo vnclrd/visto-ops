@@ -9,6 +9,7 @@ import type {
 import { fetchIngredients } from "../services/ingredientApi";
 import { fetchCatalog } from "../services/catalogApi";
 import { manageDrink } from "../services/drinkApi";
+import { getBusinessEmojiConfig } from "../utils/emojiPresets";
 
 interface DrinkBuildProps {
   account: ClientAccount;
@@ -21,24 +22,15 @@ interface RemovedIngredientHistory {
   index: number;
 }
 
-const CATEGORY_DEFAULT_EMOJIS: Record<string, string> = {
-  Espresso: "☕",
-  "Milk Tea": "🧋",
-  Matcha: "🍵",
-  "Non-Coffee": "🍹",
-  Frappe: "🥤",
-};
-
-const POPULAR_DRINK_EMOJIS = [
-  "☕", "🧋", "🍵", "🥤", "🍹", "🥛", "🍋", "🍫", "🧊", "🥥", "🍓", "🍯"
-];
-
 export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
   account,
   store,
   onBack,
 }) => {
   const [activeTab, setActiveTab] = useState<"builder" | "catalog">("builder");
+
+  // Dynamic Business Preset for Cafes
+  const emojiConfig = getBusinessEmojiConfig("cafe");
 
   // Data
   const [availableIngredients, setAvailableIngredients] = useState<IngredientRecord[]>([]);
@@ -51,7 +43,7 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
   const [drinkName, setDrinkName] = useState("");
   const [drinkCategory, setDrinkCategory] = useState("Espresso");
   const [sellingPrice, setSellingPrice] = useState("");
-  const [selectedEmoji, setSelectedEmoji] = useState<string>("☕");
+  const [selectedEmoji, setSelectedEmoji] = useState<string>(emojiConfig.defaultEmoji);
 
   // Baseline state for change detection
   const [initialDrinkState, setInitialDrinkState] = useState<{
@@ -104,10 +96,9 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
 
   const activeSelected = availableIngredients.find((i) => i.id === selectedIngredientId);
 
-  // When category changes, auto-set default emoji if user hasn't customized it
   const handleCategoryChange = (newCat: string) => {
     setDrinkCategory(newCat);
-    setSelectedEmoji(CATEGORY_DEFAULT_EMOJIS[newCat] || "☕");
+    setSelectedEmoji(emojiConfig.categoryDefaults[newCat] || emojiConfig.defaultEmoji);
   };
 
   const handleAddIngredientToRecipe = () => {
@@ -187,8 +178,8 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
   };
 
   const handleEditClick = (item: MenuItemRecord) => {
-    const fallbackEmoji = CATEGORY_DEFAULT_EMOJIS[item.category] || "☕";
-    const drinkEmoji = item.emoji || fallbackEmoji;
+    const defaultIcon = emojiConfig.categoryDefaults[item.category] || emojiConfig.defaultEmoji;
+    const drinkEmoji = item.emoji || defaultIcon;
 
     setEditingDrinkId(item.id);
     setDrinkName(item.name);
@@ -214,7 +205,7 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
     setDrinkName("");
     setDrinkCategory("Espresso");
     setSellingPrice("");
-    setSelectedEmoji("☕");
+    setSelectedEmoji(emojiConfig.defaultEmoji);
     setRecipe([]);
     setInitialDrinkState(null);
     setRemovedHistory([]);
@@ -251,7 +242,6 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
     if (drinkCategory !== initialDrinkState.category) return true;
     if (sellingPrice !== initialDrinkState.price) return true;
     if (selectedEmoji !== initialDrinkState.emoji) return true;
-
     if (recipe.length !== initialDrinkState.recipe.length) return true;
 
     const sortedCurrent = [...recipe].sort((a, b) => a.ingredientId.localeCompare(b.ingredientId));
@@ -286,7 +276,7 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
         category: drinkCategory,
         price: retailPriceNum,
         cost: totalRecipeCost,
-        emoji: selectedEmoji || CATEGORY_DEFAULT_EMOJIS[drinkCategory] || "☕",
+        emoji: selectedEmoji || emojiConfig.defaultEmoji,
         recipe,
         isActive: true,
       });
@@ -419,7 +409,7 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
                     const price = Number(item.price) || 0;
                     const profit = price - cost;
                     const margin = price > 0 ? (profit / price) * 100 : 0;
-                    const icon = item.emoji || CATEGORY_DEFAULT_EMOJIS[item.category] || "☕";
+                    const icon = item.emoji || emojiConfig.categoryDefaults[item.category] || emojiConfig.defaultEmoji;
 
                     return (
                       <tr key={item.id} className="hover:bg-neutral-800/40 transition">
@@ -507,7 +497,7 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
                       POS Menu Icon
                     </span>
                     <div className="flex flex-wrap gap-1.5">
-                      {POPULAR_DRINK_EMOJIS.map((emoji) => (
+                      {emojiConfig.palette.map((emoji) => (
                         <button
                           key={emoji}
                           type="button"
@@ -523,7 +513,7 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
                       ))}
                       <button
                         type="button"
-                        onClick={() => setSelectedEmoji(CATEGORY_DEFAULT_EMOJIS[drinkCategory] || "☕")}
+                        onClick={() => setSelectedEmoji(emojiConfig.categoryDefaults[drinkCategory] || emojiConfig.defaultEmoji)}
                         className="px-2 h-7 rounded-lg text-[10px] text-neutral-400 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800"
                       >
                         Reset Default
@@ -639,7 +629,8 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
                         </>
                       ) : (
                         <>
-                          Removed <strong>{removedHistory[length - 1]?.item.name}</strong> from recipe.
+                          Removed <strong>{removedHistory.length} ingredients</strong> (
+                          {removedHistory.map((h) => h.item.name).join(", ")})
                         </>
                       )}
                     </span>

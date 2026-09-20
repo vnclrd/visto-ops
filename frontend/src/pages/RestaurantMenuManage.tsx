@@ -9,6 +9,7 @@ import type {
 import { fetchIngredients } from '../services/ingredientApi';
 import { fetchCatalog } from '../services/catalogApi';
 import { manageDrink } from '../services/drinkApi';
+import { getBusinessEmojiConfig } from '../utils/emojiPresets';
 
 interface RestaurantMenuManageProps {
   account: ClientAccount;
@@ -28,10 +29,11 @@ export const RestaurantMenuManagePage: React.FC<RestaurantMenuManageProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'builder' | 'menu'>('builder');
 
+  // Dynamic Business Preset for Restaurants
+  const emojiConfig = getBusinessEmojiConfig('restaurant');
+
   // Data
-  const [availableIngredients, setAvailableIngredients] = useState<
-    IngredientRecord[]
-  >([]);
+  const [availableIngredients, setAvailableIngredients] = useState<IngredientRecord[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItemRecord[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -41,6 +43,7 @@ export const RestaurantMenuManagePage: React.FC<RestaurantMenuManageProps> = ({
   const [dishName, setDishName] = useState('');
   const [dishCategory, setDishCategory] = useState('Mains');
   const [sellingPrice, setSellingPrice] = useState('');
+  const [selectedEmoji, setSelectedEmoji] = useState<string>(emojiConfig.defaultEmoji);
 
   // Recipe Builder State
   const [selectedIngredientId, setSelectedIngredientId] = useState('');
@@ -52,13 +55,12 @@ export const RestaurantMenuManagePage: React.FC<RestaurantMenuManageProps> = ({
     name: string;
     category: string;
     price: string;
+    emoji: string;
     recipe: RecipeIngredient[];
   } | null>(null);
 
   // Undo history stack
-  const [removedHistory, setRemovedHistory] = useState<
-    RemovedIngredientHistory[]
-  >([]);
+  const [removedHistory, setRemovedHistory] = useState<RemovedIngredientHistory[]>([]);
 
   // Action status
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -98,6 +100,11 @@ export const RestaurantMenuManagePage: React.FC<RestaurantMenuManageProps> = ({
   const activeSelected = availableIngredients.find(
     (i) => i.id === selectedIngredientId,
   );
+
+  const handleCategoryChange = (newCat: string) => {
+    setDishCategory(newCat);
+    setSelectedEmoji(emojiConfig.categoryDefaults[newCat] || emojiConfig.defaultEmoji);
+  };
 
   const handleAddIngredient = () => {
     const amountNum = parseFloat(ingredientAmount);
@@ -183,10 +190,14 @@ export const RestaurantMenuManagePage: React.FC<RestaurantMenuManageProps> = ({
   };
 
   const handleEditClick = (item: MenuItemRecord) => {
+    const defaultIcon = emojiConfig.categoryDefaults[item.category] || emojiConfig.defaultEmoji;
+    const dishEmoji = item.emoji || defaultIcon;
+
     setEditingDishId(item.id);
     setDishName(item.name);
     setDishCategory(item.category);
     setSellingPrice(String(item.price));
+    setSelectedEmoji(dishEmoji);
     setRecipe(item.recipe || []);
     setRemovedHistory([]);
 
@@ -194,6 +205,7 @@ export const RestaurantMenuManagePage: React.FC<RestaurantMenuManageProps> = ({
       name: item.name,
       category: item.category,
       price: String(item.price),
+      emoji: dishEmoji,
       recipe: item.recipe ? JSON.parse(JSON.stringify(item.recipe)) : [],
     });
 
@@ -205,17 +217,14 @@ export const RestaurantMenuManagePage: React.FC<RestaurantMenuManageProps> = ({
     setDishName('');
     setDishCategory('Mains');
     setSellingPrice('');
+    setSelectedEmoji(emojiConfig.defaultEmoji);
     setRecipe([]);
     setInitialDishState(null);
     setRemovedHistory([]);
   };
 
   const handleDeleteDish = async (dishId: string) => {
-    if (
-      !window.confirm(
-        'Are you sure you want to remove this dish from the menu?',
-      )
-    )
+    if (!window.confirm('Are you sure you want to remove this dish from the menu?'))
       return;
 
     setDeletingId(dishId);
@@ -236,8 +245,7 @@ export const RestaurantMenuManagePage: React.FC<RestaurantMenuManageProps> = ({
   const totalRecipeCost = recipe.reduce((acc, curr) => acc + curr.totalCost, 0);
   const retailPriceNum = parseFloat(sellingPrice) || 0;
   const grossProfit = retailPriceNum - totalRecipeCost;
-  const profitMargin =
-    retailPriceNum > 0 ? (grossProfit / retailPriceNum) * 100 : 0;
+  const profitMargin = retailPriceNum > 0 ? (grossProfit / retailPriceNum) * 100 : 0;
 
   // Change Detection Logic
   const hasFormChanged = useMemo(() => {
@@ -246,6 +254,7 @@ export const RestaurantMenuManagePage: React.FC<RestaurantMenuManageProps> = ({
     if (dishName.trim() !== initialDishState.name.trim()) return true;
     if (dishCategory !== initialDishState.category) return true;
     if (sellingPrice !== initialDishState.price) return true;
+    if (selectedEmoji !== initialDishState.emoji) return true;
     if (recipe.length !== initialDishState.recipe.length) return true;
 
     const sortedCurrent = [...recipe].sort((a, b) =>
@@ -269,6 +278,7 @@ export const RestaurantMenuManagePage: React.FC<RestaurantMenuManageProps> = ({
     dishName,
     dishCategory,
     sellingPrice,
+    selectedEmoji,
     recipe,
   ]);
 
@@ -299,6 +309,7 @@ export const RestaurantMenuManagePage: React.FC<RestaurantMenuManageProps> = ({
           category: dishCategory,
           price: retailPriceNum,
           cost: totalRecipeCost,
+          emoji: selectedEmoji || emojiConfig.defaultEmoji,
           recipe,
           isActive: true,
         },
@@ -316,6 +327,7 @@ export const RestaurantMenuManagePage: React.FC<RestaurantMenuManageProps> = ({
                   category: dishCategory,
                   price: retailPriceNum,
                   cost: totalRecipeCost,
+                  emoji: selectedEmoji,
                   recipe,
                 }
               : d,
@@ -405,8 +417,7 @@ export const RestaurantMenuManagePage: React.FC<RestaurantMenuManageProps> = ({
                   Restaurant Menu Catalog
                 </h2>
                 <p className='text-xs text-neutral-400'>
-                  Manage active dishes, portion costs (COGS), and POS terminal
-                  menu pricing.
+                  Manage active dishes, portion costs (COGS), and POS terminal menu pricing.
                 </p>
               </div>
               <button
@@ -438,17 +449,21 @@ export const RestaurantMenuManagePage: React.FC<RestaurantMenuManageProps> = ({
                     const price = Number(item.price) || 0;
                     const profit = price - cost;
                     const margin = price > 0 ? (profit / price) * 100 : 0;
+                    const icon = item.emoji || emojiConfig.categoryDefaults[item.category] || emojiConfig.defaultEmoji;
 
                     return (
                       <tr
                         key={item.id}
                         className='hover:bg-neutral-800/40 transition'
                       >
-                        <td className='px-5 py-4 font-semibold text-neutral-200'>
-                          <div>{item.name}</div>
-                          <span className='text-[10px] text-neutral-500'>
-                            {item.recipe?.length || 0} kitchen ingredients
-                          </span>
+                        <td className='px-5 py-4 font-semibold text-neutral-200 flex items-center gap-3'>
+                          <span className='text-2xl w-8 text-center'>{icon}</span>
+                          <div>
+                            <div>{item.name}</div>
+                            <span className='text-[10px] text-neutral-500'>
+                              {item.recipe?.length || 0} kitchen ingredients
+                            </span>
+                          </div>
                         </td>
                         <td className='px-4 py-4 text-neutral-400'>
                           {item.category}
@@ -521,10 +536,47 @@ export const RestaurantMenuManagePage: React.FC<RestaurantMenuManageProps> = ({
               )}
 
               {/* Dish Info */}
-              <div className='bg-neutral-900 border border-neutral-800 rounded-2xl p-6 shadow-xl space-y-4'>
+              <div className='bg-neutral-900 border border-neutral-800 rounded-2xl p-6 shadow-xl space-y-5'>
                 <h2 className='text-base font-bold text-white tracking-wide'>
                   Dish Overview
                 </h2>
+
+                {/* Dish Emoji Selector Card */}
+                <div className='p-4 bg-neutral-950 rounded-xl border border-neutral-800 flex items-center gap-4'>
+                  <div className='w-14 h-14 rounded-xl border border-neutral-800 bg-neutral-900 flex items-center justify-center text-3xl shadow'>
+                    {selectedEmoji}
+                  </div>
+
+                  <div className='flex-1'>
+                    <span className='text-xs font-semibold text-neutral-200 block mb-1'>
+                      POS Menu Icon
+                    </span>
+                    <div className='flex flex-wrap gap-1.5'>
+                      {emojiConfig.palette.map((emoji) => (
+                        <button
+                          key={emoji}
+                          type='button'
+                          onClick={() => setSelectedEmoji(emoji)}
+                          className={`w-7 h-7 rounded-lg text-base flex items-center justify-center transition ${
+                            selectedEmoji === emoji
+                              ? 'bg-emerald-500/20 border border-emerald-500 text-white scale-110'
+                              : 'bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300'
+                          }`}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                      <button
+                        type='button'
+                        onClick={() => setSelectedEmoji(emojiConfig.categoryDefaults[dishCategory] || emojiConfig.defaultEmoji)}
+                        className='px-2 h-7 rounded-lg text-[10px] text-neutral-400 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800'
+                      >
+                        Reset Default
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
                 <div className='grid grid-cols-1 sm:grid-cols-3 gap-4'>
                   <div className='sm:col-span-2'>
                     <label className='block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5'>
@@ -545,7 +597,7 @@ export const RestaurantMenuManagePage: React.FC<RestaurantMenuManageProps> = ({
                     </label>
                     <select
                       value={dishCategory}
-                      onChange={(e) => setDishCategory(e.target.value)}
+                      onChange={(e) => handleCategoryChange(e.target.value)}
                       className='w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500'
                     >
                       <option value='Appetizers'>Appetizers</option>
@@ -640,13 +692,11 @@ export const RestaurantMenuManagePage: React.FC<RestaurantMenuManageProps> = ({
                     <span>
                       {removedHistory.length === 1 ? (
                         <>
-                          Removed <strong>{removedHistory[0].item.name}</strong>{' '}
-                          from recipe.
+                          Removed <strong>{removedHistory[0].item.name}</strong> from recipe.
                         </>
                       ) : (
                         <>
-                          Removed{' '}
-                          <strong>{removedHistory.length} ingredients</strong> (
+                          Removed <strong>{removedHistory.length} ingredients</strong> (
                           {removedHistory.map((h) => h.item.name).join(', ')})
                         </>
                       )}

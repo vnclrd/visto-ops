@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import type { ClientAccount, StoreItem, MenuItemRecord } from "../types";
 import { fetchCatalog } from "../services/catalogApi";
 import { manageDrink } from "../services/drinkApi";
+import { getBusinessEmojiConfig } from "../utils/emojiPresets";
 
 interface CatalogManageProps {
   account: ClientAccount;
@@ -21,17 +22,19 @@ export const CatalogManagePage: React.FC<CatalogManageProps> = ({
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
 
+  const businessType = store.businessType || account.businessType || "retail";
+  const emojiConfig = getBusinessEmojiConfig(businessType);
+
   // Form State (Creation / Editing)
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [itemName, setItemName] = useState("");
   const [itemCategory, setItemCategory] = useState("General");
   const [itemPrice, setItemPrice] = useState("");
   const [itemCost, setItemCost] = useState("");
+  const [selectedEmoji, setSelectedEmoji] = useState<string>(emojiConfig.defaultEmoji);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-
-  const businessType = store.businessType || account.businessType || "retail";
 
   const loadData = async () => {
     setIsLoading(true);
@@ -50,12 +53,18 @@ export const CatalogManagePage: React.FC<CatalogManageProps> = ({
     loadData();
   }, [account.id, store.id]);
 
+  const handleCategoryChange = (newCat: string) => {
+    setItemCategory(newCat);
+    setSelectedEmoji(emojiConfig.categoryDefaults[newCat] || emojiConfig.defaultEmoji);
+  };
+
   const handleResetForm = () => {
     setEditingItemId(null);
     setItemName("");
     setItemCategory("General");
     setItemPrice("");
     setItemCost("");
+    setSelectedEmoji(emojiConfig.defaultEmoji);
     setFormError(null);
   };
 
@@ -65,6 +74,7 @@ export const CatalogManagePage: React.FC<CatalogManageProps> = ({
     setItemCategory(item.category || "General");
     setItemPrice(String(item.price || ""));
     setItemCost(String(item.cost || ""));
+    setSelectedEmoji(item.emoji || emojiConfig.categoryDefaults[item.category] || emojiConfig.defaultEmoji);
     setFormError(null);
   };
 
@@ -94,6 +104,7 @@ export const CatalogManagePage: React.FC<CatalogManageProps> = ({
           category: itemCategory.trim() || "General",
           price: priceNum,
           cost: costNum,
+          emoji: selectedEmoji || emojiConfig.defaultEmoji,
           recipe: [], // Direct catalog products have an empty recipe
           isActive: true,
         }
@@ -111,6 +122,7 @@ export const CatalogManagePage: React.FC<CatalogManageProps> = ({
                   category: itemCategory.trim() || "General",
                   price: priceNum,
                   cost: costNum,
+                  emoji: selectedEmoji,
                 }
               : i
           )
@@ -173,21 +185,59 @@ export const CatalogManagePage: React.FC<CatalogManageProps> = ({
       <main className="flex-1 p-8 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left Column: Form */}
         <div className="lg:col-span-4">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 sticky top-20 shadow-xl">
-            <h2 className="text-lg font-bold text-white mb-1">
-              {editingItemId ? "Edit Product" : "Add Product / Item"}
-            </h2>
-            <p className="text-xs text-neutral-400 mb-5">
-              {businessType === "service"
-                ? "Configure service tiers, machine rates, or billable fees."
-                : "Manage retail inventory, pricing, and gross margins."}
-            </p>
+          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 sticky top-20 shadow-xl space-y-4">
+            <div>
+              <h2 className="text-lg font-bold text-white mb-1">
+                {editingItemId ? "Edit Item" : "Add Product / Service"}
+              </h2>
+              <p className="text-xs text-neutral-400">
+                {businessType === "service"
+                  ? "Configure service tiers, machine rates, or billable fees."
+                  : "Manage retail inventory, pricing, and gross margins."}
+              </p>
+            </div>
 
             {formError && (
-              <div className="mb-4 rounded-lg bg-rose-500/10 border border-rose-500/30 p-2.5 text-xs text-rose-400">
+              <div className="rounded-lg bg-rose-500/10 border border-rose-500/30 p-2.5 text-xs text-rose-400">
                 {formError}
               </div>
             )}
+
+            {/* Product Emoji Selector */}
+            <div className="p-4 bg-neutral-950 rounded-xl border border-neutral-800 flex items-center gap-4">
+              <div className="w-14 h-14 rounded-xl border border-neutral-800 bg-neutral-900 flex items-center justify-center text-3xl shadow">
+                {selectedEmoji}
+              </div>
+
+              <div className="flex-1">
+                <span className="text-xs font-semibold text-neutral-200 block mb-1">
+                  POS Item Icon
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {emojiConfig.palette.map((emoji) => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onClick={() => setSelectedEmoji(emoji)}
+                      className={`w-7 h-7 rounded-lg text-base flex items-center justify-center transition ${
+                        selectedEmoji === emoji
+                          ? "bg-emerald-500/20 border border-emerald-500 text-white scale-110"
+                          : "bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300"
+                      }`}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedEmoji(emojiConfig.categoryDefaults[itemCategory] || emojiConfig.defaultEmoji)}
+                    className="px-2 h-7 rounded-lg text-[10px] text-neutral-400 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800"
+                  >
+                    Reset
+                  </button>
+                </div>
+              </div>
+            </div>
 
             <form onSubmit={handleSaveItem} className="space-y-4">
               <div>
@@ -197,7 +247,7 @@ export const CatalogManagePage: React.FC<CatalogManageProps> = ({
                 <input
                   type="text"
                   required
-                  placeholder={businessType === "service" ? "e.g. Wash & Fold (8kg)" : "e.g. Relx Pod / Tobacco"}
+                  placeholder={businessType === "service" ? "e.g. Wash & Fold (8kg)" : "e.g. Relx Pod, Cotton T-Shirt"}
                   value={itemName}
                   onChange={(e) => setItemName(e.target.value)}
                   className="w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3.5 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 transition"
@@ -210,9 +260,9 @@ export const CatalogManagePage: React.FC<CatalogManageProps> = ({
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Vapes, Laundry, Services"
+                  placeholder="e.g. Vapes, Apparel, Services"
                   value={itemCategory}
-                  onChange={(e) => setItemCategory(e.target.value)}
+                  onChange={(e) => handleCategoryChange(e.target.value)}
                   className="w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3.5 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 transition"
                 />
               </div>
@@ -335,35 +385,39 @@ export const CatalogManagePage: React.FC<CatalogManageProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-800/60">
-                  {filteredItems.map((item) => (
-                    <tr key={item.id} className="hover:bg-neutral-800/40 transition">
-                      <td className="px-5 py-4 font-semibold text-neutral-200">
-                        {item.name}
-                      </td>
-                      <td className="px-4 py-4 text-neutral-400">{item.category}</td>
-                      <td className="px-4 py-4 text-emerald-400 font-medium">
-                        ₱{Number(item.price).toFixed(2)}
-                      </td>
-                      <td className="px-4 py-4 text-neutral-400">
-                        ₱{Number(item.cost || 0).toFixed(2)}
-                      </td>
-                      <td className="px-5 py-4 text-right space-x-2">
-                        <button
-                          onClick={() => handleStartEdit(item)}
-                          className="px-3 py-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 hover:text-emerald-400 border border-neutral-700 rounded text-xs transition"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDeleteItem(item.id)}
-                          disabled={deletingId === item.id}
-                          className="px-3 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded text-xs transition disabled:opacity-50"
-                        >
-                          {deletingId === item.id ? "..." : "Delete"}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {filteredItems.map((item) => {
+                    const icon = item.emoji || emojiConfig.categoryDefaults[item.category] || emojiConfig.defaultEmoji;
+                    return (
+                      <tr key={item.id} className="hover:bg-neutral-800/40 transition">
+                        <td className="px-5 py-4 font-semibold text-neutral-200 flex items-center gap-3">
+                          <span className="text-2xl w-8 text-center">{icon}</span>
+                          <div>{item.name}</div>
+                        </td>
+                        <td className="px-4 py-4 text-neutral-400">{item.category}</td>
+                        <td className="px-4 py-4 text-emerald-400 font-medium">
+                          ₱{Number(item.price).toFixed(2)}
+                        </td>
+                        <td className="px-4 py-4 text-neutral-400">
+                          ₱{Number(item.cost || 0).toFixed(2)}
+                        </td>
+                        <td className="px-5 py-4 text-right space-x-2">
+                          <button
+                            onClick={() => handleStartEdit(item)}
+                            className="px-3 py-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 hover:text-emerald-400 border border-neutral-700 rounded text-xs transition"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeleteItem(item.id)}
+                            disabled={deletingId === item.id}
+                            className="px-3 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded text-xs transition disabled:opacity-50"
+                          >
+                            {deletingId === item.id ? "..." : "Delete"}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             )}

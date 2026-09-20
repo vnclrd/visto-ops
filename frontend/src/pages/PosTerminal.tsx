@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import type { ClientAccount, StoreItem, MenuItemRecord, CartItem } from '../types';
 import { fetchCatalog } from '../services/catalogApi';
 import { processOrder } from '../services/orderApi';
+import { getBusinessEmojiConfig } from '../utils/emojiPresets';
 
 const DEFAULT_UPSIZE_FEE = 20;
 
