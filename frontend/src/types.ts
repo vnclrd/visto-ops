@@ -4,7 +4,7 @@ export interface StoreItem {
   location?: string;
   isActive?: boolean;
   createdAt?: string;
-  businessType?: "fnb" | "retail" | "service" | string;
+  businessType?: "cafe" | "restaurant" | "retail" | "service" | string;
 }
 
 export interface ClientAccount {
@@ -12,7 +12,7 @@ export interface ClientAccount {
   name: string;
   email: string;
   owner?: string;
-  businessType?: "fnb" | "retail" | "service" | string;
+  businessType?: "cafe" | "restaurant" | "retail" | "service" | string;
   stores: StoreItem[];
 }
 
@@ -48,7 +48,7 @@ export interface LoginResponse { // visto-accountLogin
   error?: string;
 }
 
-export interface IngredientRecord { // visto-fnb-ingredientGet
+export interface IngredientRecord { // visto-cafe-ingredientGet
   id: string;
   name: string;
   category: "Dairy" | "Beans" | "Syrups" | "Powders" | "Packaging" | string;
@@ -65,7 +65,7 @@ export interface IngredientRecord { // visto-fnb-ingredientGet
   updatedAt?: string;
 }
 
-export interface RecipeIngredient { // visto-fnb-drinkBuild
+export interface RecipeIngredient { // visto-cafe-drinkBuild
   ingredientId: string;
   name: string;
   unit: string;
@@ -74,7 +74,7 @@ export interface RecipeIngredient { // visto-fnb-drinkBuild
   totalCost: number;
 }
 
-export interface MenuItemRecord { // visto-fnb-drinkBuild
+export interface MenuItemRecord { // visto-cafe-drinkBuild
   id: string;
   name: string;
   category: string;

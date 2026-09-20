@@ -3,7 +3,7 @@ import type { MenuItemRecord } from "../types";
 import type {
   DrinkManageDataPayload,
   DrinkManageOperation,
-} from "../functions/visto-fnb-drinkManage/request";
+} from "../functions/visto-cafe-drinkManage/request";
 
 export class DrinkService {
   constructor(private repo = new DrinkRepository()) {}

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import type { ClientAccount, StoreItem } from "../types";
 import { ManageIngredientsPage } from "./IngredientsManage";
 import { DrinkBuildPage } from "./DrinkBuild";
+import { RestaurantMenuManagePage } from "./RestaurantMenuManage";
+import { CatalogManagePage } from "./CatalogManage";
 import { fetchMetrics, type MetricsResult } from "../services/metricApi";
 
 interface OwnerDashboardProps {
@@ -18,15 +20,19 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
   onOpenGlobalDashboard,
 }) => {
   const storeCount = account.stores?.length || 0;
-  const [currentView, setCurrentView] = useState<"overview" | "ingredients" | "DrinkBuild">("overview");
+  const [currentView, setCurrentView] = useState<
+    "overview" | "ingredients" | "DrinkBuild" | "restaurantMenu" | "catalogManage"
+  >("overview");
 
   // Live Metrics State
   const [metrics, setMetrics] = useState<MetricsResult | null>(null);
   const [isLoadingMetrics, setIsLoadingMetrics] = useState<boolean>(true);
   const [metricError, setMetricError] = useState<string | null>(null);
 
-  const businessType = store.businessType || account.businessType || "fnb";
-  const isFnB = businessType === "fnb";
+  const businessType = store.businessType || account.businessType || "cafe";
+  const isCafe = businessType === "cafe";
+  const isRestaurant = businessType === "restaurant";
+  const usesRecipeBOM = isCafe || isRestaurant;
 
   const loadStoreMetrics = async () => {
     setIsLoadingMetrics(true);
@@ -45,11 +51,10 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
     loadStoreMetrics();
   }, [account.id, store.id]);
 
-  // Read live metrics with fallback to store object props
   const grossSales = metrics ? metrics.todaySales : (store as any).todaySales || 0;
   const completedOrders = metrics ? metrics.todayOrders : (store as any).todayOrders || 0;
 
-  // Sub-view 1: Ingredients Management
+  // Sub-view 1: Ingredients & Raw Materials Management (Cafes & Restaurants)
   if (currentView === "ingredients") {
     return (
       <ManageIngredientsPage
@@ -63,10 +68,38 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
     );
   }
 
-  // Sub-view 2: Drink Builder Studio
+  // Sub-view 2: Cafe Drink Recipe Studio
   if (currentView === "DrinkBuild") {
     return (
       <DrinkBuildPage
+        account={account}
+        store={store}
+        onBack={() => {
+          setCurrentView("overview");
+          loadStoreMetrics();
+        }}
+      />
+    );
+  }
+
+  // Sub-view 3: Restaurant Kitchen Menu & Plate Costing Studio
+  if (currentView === "restaurantMenu") {
+    return (
+      <RestaurantMenuManagePage
+        account={account}
+        store={store}
+        onBack={() => {
+          setCurrentView("overview");
+          loadStoreMetrics();
+        }}
+      />
+    );
+  }
+
+  // Sub-view 4: General Retail Products & Direct Services
+  if (currentView === "catalogManage") {
+    return (
+      <CatalogManagePage
         account={account}
         store={store}
         onBack={() => {
@@ -177,8 +210,9 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
             Catalog & Inventory Management
           </h2>
 
-          <div className={`grid gap-6 ${isFnB ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"}`}>
-            {isFnB && (
+          <div className={`grid gap-6 ${usesRecipeBOM ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"}`}>
+            {/* Card 1: Ingredients / Supplies (Rendered for Cafes & Restaurants) */}
+            {usesRecipeBOM && (
               <button
                 onClick={() => setCurrentView("ingredients")}
                 className="p-6 bg-neutral-900/80 hover:bg-neutral-900 border border-neutral-800 hover:border-emerald-500/50 rounded-2xl text-left transition flex items-center justify-between group shadow-lg active:scale-[0.99]"
@@ -188,10 +222,12 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                     📦
                   </div>
                   <h3 className="text-lg font-semibold text-neutral-100 group-hover:text-emerald-400 transition">
-                    Manage Ingredients & Supplies
+                    {isRestaurant ? "Kitchen Stock & Supplies" : "Manage Ingredients & Supplies"}
                   </h3>
                   <p className="text-xs text-neutral-400 mt-1">
-                    Adjust current raw stock levels, set units, and manage reorder alerts.
+                    {isRestaurant
+                      ? "Track raw kitchen inventory, meat/produce units, and reorder levels."
+                      : "Adjust current raw stock levels, set units, and manage reorder alerts."}
                   </p>
                 </div>
                 <span className="text-emerald-400 text-lg opacity-0 group-hover:opacity-100 transition translate-x-[-6px] group-hover:translate-x-0">
@@ -200,21 +236,32 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
               </button>
             )}
 
+            {/* Card 2: Distinct Product / Dish Builder */}
             <button
-              onClick={() => setCurrentView("DrinkBuild")}
+              onClick={() => {
+                if (isCafe) setCurrentView("DrinkBuild");
+                else if (isRestaurant) setCurrentView("restaurantMenu");
+                else setCurrentView("catalogManage");
+              }}
               className="p-6 bg-neutral-900/80 hover:bg-neutral-900 border border-neutral-800 hover:border-emerald-500/50 rounded-2xl text-left transition flex items-center justify-between group shadow-lg active:scale-[0.99]"
             >
               <div>
                 <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 font-bold mb-3 border border-emerald-500/20 group-hover:scale-110 transition">
-                  {isFnB ? "☕" : "🏷️"}
+                  {isCafe ? "☕" : isRestaurant ? "🍽️" : "🏷️"}
                 </div>
                 <h3 className="text-lg font-semibold text-neutral-100 group-hover:text-emerald-400 transition">
-                  {isFnB ? "Manage Drinks" : "Manage Products"}
+                  {isCafe
+                    ? "Manage Drinks"
+                    : isRestaurant
+                    ? "Manage Menu Dishes"
+                    : "Manage Products"}
                 </h3>
                 <p className="text-xs text-neutral-400 mt-1">
-                  {isFnB
+                  {isCafe
                     ? "Compose drink recipes, map ingredient deductions, and set terminal pricing."
-                    : "Add retail items, adjust selling prices, and maintain inventory."}
+                    : isRestaurant
+                    ? "Create recipes, map raw kitchen deductions, and monitor food cost."
+                    : "Add retail inventory items, set prices, and update stock."}
                 </p>
               </div>
               <span className="text-emerald-400 text-lg opacity-0 group-hover:opacity-100 transition translate-x-[-6px] group-hover:translate-x-0">

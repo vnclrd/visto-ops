@@ -1,5 +1,5 @@
 import type { Response } from "express";
-import type { DrinkManageRequest } from "../functions/visto-fnb-drinkManage/request";
+import type { DrinkManageRequest } from "../functions/visto-cafe-drinkManage/request";
 
 export class DrinkMiddleware {
   static validateManageRequest(payload: DrinkManageRequest) {

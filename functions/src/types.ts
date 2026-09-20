@@ -4,7 +4,7 @@ export interface StoreItem { // visto-accountLogin
   location?: string;
   isActive?: boolean;
   createdAt?: string;
-  businessType?: "fnb" | "retail" | "service" | string;
+  businessType?: "cafe" | "restaurant" | "retail" | "service" | string;
 }
 
 export interface ClientAccount { // visto-accountLogin
@@ -14,7 +14,7 @@ export interface ClientAccount { // visto-accountLogin
   password?: string;
   pin?: string;
   owner?: string;
-  businessType?: "fnb" | "retail" | "service" | string;
+  businessType?: "cafe" | "restaurant" | "retail" | "service" | string;
   stores: StoreItem[];
 }
 
@@ -22,7 +22,7 @@ export interface VerifyPinResult { // visto-accountVerifyPin
   verified: boolean;
 }
 
-export interface IngredientRecord { // visto-fnb-ingredientsGet
+export interface IngredientRecord { // visto-cafe-ingredientsGet
   id: string;
   name: string;
   category: string;
@@ -39,7 +39,7 @@ export interface IngredientRecord { // visto-fnb-ingredientsGet
   updatedAt?: string;
 }
 
-export interface RecipeIngredientPayload { // visto-fnb-drinkBuild
+export interface RecipeIngredientPayload { // visto-cafe-drinkBuild
   ingredientId: string;
   name: string;
   unit: string;
@@ -48,7 +48,7 @@ export interface RecipeIngredientPayload { // visto-fnb-drinkBuild
   totalCost: number;
 }
 
-export interface MenuItemRecord { // visto-fnb-drinkBuild
+export interface MenuItemRecord { // visto-cafe-drinkBuild
   id: string;
   name: string;
   category: string;

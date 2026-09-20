@@ -1,5 +1,5 @@
 import type { Response } from 'express';
-import type { IngredientsManageRequest } from '../functions/visto-fnb-ingredientsManage/request';
+import type { IngredientsManageRequest } from '../functions/visto-cafe-ingredientsManage/request';
 
 export class IngredientMiddleware {
   // visto-accountVerifyPin

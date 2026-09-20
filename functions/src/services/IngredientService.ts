@@ -3,7 +3,7 @@ import type { IngredientRecord } from '../types';
 import type {
   IngredientManagePayload,
   IngredientManageOperation,
-} from '../functions/visto-fnb-ingredientsManage/request';
+} from '../functions/visto-cafe-ingredientsManage/request';
 
 export class IngredientService {
   constructor(private repo = new IngredientRepository()) {}

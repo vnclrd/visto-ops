@@ -45,7 +45,7 @@ export class AccountRepository {
       email: data.email ?? "",
       password: data.password ?? "",
       owner: data.owner ?? "",
-      businessType: data.businessType ?? "fnb",
+      businessType: data.businessType ?? "cafe",
       stores,
     };
   }
