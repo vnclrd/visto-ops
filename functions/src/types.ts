@@ -65,6 +65,7 @@ export interface MenuItemRecord { // visto-cafe-drinkBuild
   category: string;
   price: number;
   cost: number;
+  emoji?: string;
   recipe: RecipeIngredientPayload[];
   isActive: boolean;
   createdAt?: string;

@@ -33,6 +33,7 @@ export class CatalogRepository {
         name: data.name ?? "",
         category: data.category ?? "General",
         price: Number(data.price) || 0,
+        emoji: data.emoji || '☕',
         cost: Number(data.cost) || 0,
         recipe: Array.isArray(data.recipe) ? data.recipe : [],
         isActive: data.isActive !== undefined ? Boolean(data.isActive) : true,

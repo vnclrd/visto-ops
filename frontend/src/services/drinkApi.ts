@@ -10,6 +10,7 @@ export interface DrinkManagePayload {
   category?: string;
   price?: number;
   cost?: number;
+  emoji?: string;
   recipe?: RecipeIngredient[];
   isActive?: boolean;
 }

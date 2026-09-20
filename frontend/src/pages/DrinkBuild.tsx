@@ -21,6 +21,18 @@ interface RemovedIngredientHistory {
   index: number;
 }
 
+const CATEGORY_DEFAULT_EMOJIS: Record<string, string> = {
+  Espresso: "☕",
+  "Milk Tea": "🧋",
+  Matcha: "🍵",
+  "Non-Coffee": "🍹",
+  Frappe: "🥤",
+};
+
+const POPULAR_DRINK_EMOJIS = [
+  "☕", "🧋", "🍵", "🥤", "🍹", "🥛", "🍋", "🍫", "🧊", "🥥", "🍓", "🍯"
+];
+
 export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
   account,
   store,
@@ -39,12 +51,14 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
   const [drinkName, setDrinkName] = useState("");
   const [drinkCategory, setDrinkCategory] = useState("Espresso");
   const [sellingPrice, setSellingPrice] = useState("");
+  const [selectedEmoji, setSelectedEmoji] = useState<string>("☕");
 
   // Baseline state for change detection
   const [initialDrinkState, setInitialDrinkState] = useState<{
     name: string;
     category: string;
     price: string;
+    emoji: string;
     recipe: RecipeIngredient[];
   } | null>(null);
 
@@ -53,7 +67,7 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
   const [ingredientAmount, setIngredientAmount] = useState("");
   const [recipe, setRecipe] = useState<RecipeIngredient[]>([]);
 
-  // Undo history stack for multiple deletions
+  // Undo history stack
   const [removedHistory, setRemovedHistory] = useState<RemovedIngredientHistory[]>([]);
 
   // Action status
@@ -89,6 +103,12 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
   }, [account.id, store.id]);
 
   const activeSelected = availableIngredients.find((i) => i.id === selectedIngredientId);
+
+  // When category changes, auto-set default emoji if user hasn't customized it
+  const handleCategoryChange = (newCat: string) => {
+    setDrinkCategory(newCat);
+    setSelectedEmoji(CATEGORY_DEFAULT_EMOJIS[newCat] || "☕");
+  };
 
   const handleAddIngredientToRecipe = () => {
     const amountNum = parseFloat(ingredientAmount);
@@ -153,7 +173,6 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
     if (removedHistory.length === 0) return;
 
     let updated = [...recipe];
-    // Re-insert in reverse order of removal so original indices stay intact
     for (let i = removedHistory.length - 1; i >= 0; i--) {
       const entry = removedHistory[i];
       if (entry.index <= updated.length) {
@@ -168,10 +187,14 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
   };
 
   const handleEditClick = (item: MenuItemRecord) => {
+    const fallbackEmoji = CATEGORY_DEFAULT_EMOJIS[item.category] || "☕";
+    const drinkEmoji = item.emoji || fallbackEmoji;
+
     setEditingDrinkId(item.id);
     setDrinkName(item.name);
     setDrinkCategory(item.category);
     setSellingPrice(String(item.price));
+    setSelectedEmoji(drinkEmoji);
     setRecipe(item.recipe || []);
     setRemovedHistory([]);
 
@@ -179,6 +202,7 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
       name: item.name,
       category: item.category,
       price: String(item.price),
+      emoji: drinkEmoji,
       recipe: item.recipe ? JSON.parse(JSON.stringify(item.recipe)) : [],
     });
 
@@ -190,6 +214,7 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
     setDrinkName("");
     setDrinkCategory("Espresso");
     setSellingPrice("");
+    setSelectedEmoji("☕");
     setRecipe([]);
     setInitialDrinkState(null);
     setRemovedHistory([]);
@@ -225,6 +250,7 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
     if (drinkName.trim() !== initialDrinkState.name.trim()) return true;
     if (drinkCategory !== initialDrinkState.category) return true;
     if (sellingPrice !== initialDrinkState.price) return true;
+    if (selectedEmoji !== initialDrinkState.emoji) return true;
 
     if (recipe.length !== initialDrinkState.recipe.length) return true;
 
@@ -237,7 +263,7 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
     }
 
     return false;
-  }, [editingDrinkId, initialDrinkState, drinkName, drinkCategory, sellingPrice, recipe]);
+  }, [editingDrinkId, initialDrinkState, drinkName, drinkCategory, sellingPrice, selectedEmoji, recipe]);
 
   const handleSaveDrink = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -260,6 +286,7 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
         category: drinkCategory,
         price: retailPriceNum,
         cost: totalRecipeCost,
+        emoji: selectedEmoji || CATEGORY_DEFAULT_EMOJIS[drinkCategory] || "☕",
         recipe,
         isActive: true,
       });
@@ -276,6 +303,7 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
                   category: drinkCategory,
                   price: retailPriceNum,
                   cost: totalRecipeCost,
+                  emoji: selectedEmoji,
                   recipe,
                 }
               : d
@@ -391,14 +419,18 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
                     const price = Number(item.price) || 0;
                     const profit = price - cost;
                     const margin = price > 0 ? (profit / price) * 100 : 0;
+                    const icon = item.emoji || CATEGORY_DEFAULT_EMOJIS[item.category] || "☕";
 
                     return (
                       <tr key={item.id} className="hover:bg-neutral-800/40 transition">
-                        <td className="px-5 py-4 font-semibold text-neutral-200">
-                          <div>{item.name}</div>
-                          <span className="text-[10px] text-neutral-500">
-                            {item.recipe?.length || 0} ingredients
-                          </span>
+                        <td className="px-5 py-4 font-semibold text-neutral-200 flex items-center gap-3">
+                          <span className="text-2xl w-8 text-center">{icon}</span>
+                          <div>
+                            <div>{item.name}</div>
+                            <span className="text-[10px] text-neutral-500">
+                              {item.recipe?.length || 0} ingredients
+                            </span>
+                          </div>
                         </td>
                         <td className="px-4 py-4 text-neutral-400">{item.category}</td>
                         <td className="px-4 py-4 text-white font-medium">₱{price.toFixed(2)}</td>
@@ -461,8 +493,45 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
               )}
 
               {/* Identity Form */}
-              <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 shadow-xl space-y-4">
+              <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 shadow-xl space-y-5">
                 <h2 className="text-base font-bold text-white tracking-wide">Drink Identity</h2>
+
+                {/* Emoji Selector Card */}
+                <div className="p-4 bg-neutral-950 rounded-xl border border-neutral-800 flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-xl border border-neutral-800 bg-neutral-900 flex items-center justify-center text-3xl shadow">
+                    {selectedEmoji}
+                  </div>
+
+                  <div className="flex-1">
+                    <span className="text-xs font-semibold text-neutral-200 block mb-1">
+                      POS Menu Icon
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {POPULAR_DRINK_EMOJIS.map((emoji) => (
+                        <button
+                          key={emoji}
+                          type="button"
+                          onClick={() => setSelectedEmoji(emoji)}
+                          className={`w-7 h-7 rounded-lg text-base flex items-center justify-center transition ${
+                            selectedEmoji === emoji
+                              ? "bg-emerald-500/20 border border-emerald-500 text-white scale-110"
+                              : "bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-neutral-300"
+                          }`}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setSelectedEmoji(CATEGORY_DEFAULT_EMOJIS[drinkCategory] || "☕")}
+                        className="px-2 h-7 rounded-lg text-[10px] text-neutral-400 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800"
+                      >
+                        Reset Default
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="sm:col-span-2">
                     <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">
@@ -470,7 +539,7 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
                     </label>
                     <input
                       type="text"
-                      placeholder="e.g. Iced Vanilla Oat Latte"
+                      placeholder="e.g. Spanish Latte"
                       value={drinkName}
                       onChange={(e) => setDrinkName(e.target.value)}
                       className="w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3.5 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
@@ -483,7 +552,7 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
                     </label>
                     <select
                       value={drinkCategory}
-                      onChange={(e) => setDrinkCategory(e.target.value)}
+                      onChange={(e) => handleCategoryChange(e.target.value)}
                       className="w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
                     >
                       <option value="Espresso">Espresso</option>
@@ -502,7 +571,7 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
                   <input
                     type="number"
                     step="1"
-                    placeholder="160"
+                    placeholder="180"
                     value={sellingPrice}
                     onChange={(e) => setSellingPrice(e.target.value)}
                     className="w-full sm:w-1/2 rounded-lg bg-neutral-950 border border-neutral-800 px-3.5 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
@@ -570,8 +639,7 @@ export const DrinkBuildPage: React.FC<DrinkBuildProps> = ({
                         </>
                       ) : (
                         <>
-                          Removed <strong>{removedHistory.length} ingredients</strong> (
-                          {removedHistory.map((h) => h.item.name).join(", ")})
+                          Removed <strong>{removedHistory[length - 1]?.item.name}</strong> from recipe.
                         </>
                       )}
                     </span>

@@ -92,6 +92,7 @@ export interface MenuItemRecord {
   price: number;
   cost: number;
   recipe: RecipeIngredient[];
+  emoji?: string;
   isActive: boolean;
   createdAt?: string;
   updatedAt?: string;

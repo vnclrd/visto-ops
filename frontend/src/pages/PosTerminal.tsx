@@ -297,25 +297,47 @@ export const PosTerminal: React.FC<PosTerminalProps> = ({
               </div>
             ) : (
               <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4'>
-                {filteredItems.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => handleItemClick(item)}
-                    className='p-4 bg-neutral-800/60 hover:bg-neutral-800 border border-neutral-700 rounded-xl flex flex-col justify-between text-left transition h-32 active:scale-95'
-                  >
-                    <div>
-                      <h4 className='font-semibold text-neutral-100 line-clamp-2'>
-                        {item.name}
-                      </h4>
-                      <p className='text-xs text-neutral-400 mt-1'>
-                        {item.category}
-                      </p>
-                    </div>
-                    <span className='font-medium text-emerald-400'>
-                      ₱{item.price.toFixed(2)}
-                    </span>
-                  </button>
-                ))}
+                {filteredItems.map((item) => {
+                  const displayEmoji =
+                    (item as any).emoji ||
+                    (item.category === 'Frappe'
+                      ? '🥤'
+                      : item.category === 'Milk Tea'
+                      ? '🧋'
+                      : item.category === 'Matcha'
+                      ? '🍵'
+                      : item.category === 'Non-Coffee'
+                      ? '🍹'
+                      : '☕');
+
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => handleItemClick(item)}
+                      className='relative p-4 bg-neutral-800/60 hover:bg-neutral-800 border border-neutral-700 rounded-xl flex flex-col justify-between text-left transition h-32 active:scale-95 group'
+                    >
+                      {/* Top Right Emoji */}
+                      <span className='absolute top-3 right-3 text-2xl select-none transition-transform group-hover:scale-110'>
+                        {displayEmoji}
+                      </span>
+
+                      {/* Item Details */}
+                      <div className='pr-8'>
+                        <h4 className='font-semibold text-neutral-100 line-clamp-2 leading-snug'>
+                          {item.name}
+                        </h4>
+                        <p className='text-xs text-neutral-400 mt-1'>
+                          {item.category}
+                        </p>
+                      </div>
+
+                      {/* Price */}
+                      <span className='font-medium text-emerald-400'>
+                        ₱{item.price.toFixed(2)}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>

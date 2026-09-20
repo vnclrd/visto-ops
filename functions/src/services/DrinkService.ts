@@ -1,9 +1,9 @@
-import { DrinkRepository } from "../repositories/DrinkRepository";
-import type { MenuItemRecord } from "../types";
+import { DrinkRepository } from '../repositories/DrinkRepository';
+import type { MenuItemRecord } from '../types';
 import type {
-  DrinkManageDataPayload,
+  DrinkManagePayload,
   DrinkManageOperation,
-} from "../functions/visto-cafe-drinkManage/request";
+} from '../functions/visto-cafe-drinkManage/request';
 
 export class DrinkService {
   constructor(private repo = new DrinkRepository()) {}
@@ -13,60 +13,49 @@ export class DrinkService {
     storeId: string,
     operation: DrinkManageOperation,
     drinkId?: string,
-    data?: DrinkManageDataPayload
+    data?: DrinkManagePayload,
   ) {
-    if (operation === "create") {
-      if (!data?.name || !data.name.trim()) {
-        throw new Error("Drink name is required");
-      }
-      if (data.price === undefined || Number(data.price) < 0) {
-        throw new Error("A valid non-negative selling price is required");
-      }
-      if (!data.recipe || !Array.isArray(data.recipe) || data.recipe.length === 0) {
-        throw new Error("A recipe must include at least one ingredient");
+    if (operation === 'create') {
+      if (!data?.name || data?.price === undefined) {
+        throw new Error('Name and price are required to create a drink');
       }
 
-      const calculatedCost = data.recipe.reduce(
-        (acc, curr) => acc + (Number(curr.totalCost) || 0),
-        0
-      );
-
-      const newRecord: Omit<MenuItemRecord, "id"> = {
+      const newRecord: Omit<MenuItemRecord, 'id'> = {
         name: data.name.trim(),
-        category: data.category?.trim() || "Espresso",
+        category: data.category?.trim() || 'General',
         price: Number(data.price),
-        cost: calculatedCost,
-        recipe: data.recipe,
-        isActive: data.isActive !== undefined ? Boolean(data.isActive) : true,
+        cost: Number(data.cost) || 0,
+        emoji: data.emoji || '☕',
+        recipe: data.recipe || [],
+        isActive: data.isActive !== false,
       };
 
       return await this.repo.createDrink(clientId, storeId, newRecord, data.id);
     }
 
-    if (operation === "update") {
+    if (operation === 'update') {
       const targetId = drinkId || data?.id;
       if (!targetId) {
-        throw new Error("Drink ID is required for update");
+        throw new Error('Drink ID is required for update');
       }
 
       const updates: any = {};
+
       if (data?.name !== undefined) updates.name = data.name.trim();
       if (data?.category !== undefined) updates.category = data.category.trim();
       if (data?.price !== undefined) updates.price = Number(data.price);
-      if (data?.isActive !== undefined) updates.isActive = Boolean(data.isActive);
+      if (data?.cost !== undefined) updates.cost = Number(data.cost);
+      if (data?.emoji !== undefined) updates.emoji = data.emoji;
+      if (data?.recipe !== undefined) updates.recipe = data.recipe;
+      if (data?.isActive !== undefined)
+        updates.isActive = Boolean(data.isActive);
 
-      if (data?.recipe !== undefined) {
-        if (!Array.isArray(data.recipe) || data.recipe.length === 0) {
-          throw new Error("A recipe cannot be empty");
-        }
-        updates.recipe = data.recipe;
-        updates.cost = data.recipe.reduce(
-          (acc, curr) => acc + (Number(curr.totalCost) || 0),
-          0
-        );
-      }
-
-      const updated = await this.repo.updateDrink(clientId, storeId, targetId, updates);
+      const updated = await this.repo.updateDrink(
+        clientId,
+        storeId,
+        targetId,
+        updates,
+      );
       if (!updated) {
         throw new Error(`Drink '${targetId}' not found`);
       }
@@ -74,10 +63,10 @@ export class DrinkService {
       return { id: targetId, updated: true };
     }
 
-    if (operation === "delete") {
+    if (operation === 'delete') {
       const targetId = drinkId || data?.id;
       if (!targetId) {
-        throw new Error("Drink ID is required for delete");
+        throw new Error('Drink ID is required for delete');
       }
 
       const deleted = await this.repo.deleteDrink(clientId, storeId, targetId);
