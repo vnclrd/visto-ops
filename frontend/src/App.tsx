@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { LoginPage } from "./pages/Login";
 import { StoreSelectionPage } from "./pages/StoreSelection";
 import { PosTerminal } from "./pages/PosTerminal";
-import { OwnerDashboard } from "./pages/OwnerDashboard";
-import { OwnerGlobalDashboard } from "./pages/GlobalOwnerDashboard";
+import { Dashboard } from "./pages/Dashboard";
+import { GlobalDashboard } from "./pages/GlobalDashboard";
 import type { ClientAccount, StoreItem } from "./types";
 
 const ACCOUNT_KEY = "visto_client_account";
@@ -64,7 +64,7 @@ export default function App() {
   // Step 5: Global Enterprise Dashboard View
   if (currentAccount && isGlobalOwnerView) {
     return (
-      <OwnerGlobalDashboard
+      <GlobalDashboard
         account={currentAccount}
         currentStore={selectedStore}
         onBack={() => setIsGlobalOwnerView(false)}
@@ -80,7 +80,7 @@ export default function App() {
   // Step 4: Single Store Owner Dashboard View
   if (currentAccount && selectedStore && isStoreOwnerView) {
     return (
-      <OwnerDashboard
+      <Dashboard
         account={currentAccount}
         store={selectedStore}
         onBackToRegister={() => setIsStoreOwnerView(false)}
@@ -97,7 +97,7 @@ export default function App() {
         store={selectedStore}
         onLogout={handleLogout}
         onSwitchStore={handleSwitchStore}
-        onOpenOwnerDashboard={() => setIsStoreOwnerView(true)}
+        onOpenDashboard={() => setIsStoreOwnerView(true)}
       />
     );
   }

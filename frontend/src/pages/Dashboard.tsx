@@ -6,15 +6,23 @@ import { RestaurantMenuManagePage } from "./RestaurantMenuManage";
 import { CatalogManagePage } from "./CatalogManage";
 import { fetchMetrics, type MetricsResult } from "../services/metricApi";
 import { fetchIngredients } from "../services/ingredientApi";
+import { verifyOwnerPin } from "../services/authApi";
 
-interface OwnerDashboardProps {
+interface DashboardProps {
   account: ClientAccount;
   store: StoreItem;
   onBackToRegister: () => void;
   onOpenGlobalDashboard: () => void;
 }
 
-export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
+type ProtectedActionType =
+  | "globalDashboard"
+  | "DrinkBuild"
+  | "restaurantMenu"
+  | "catalogManage"
+  | null;
+
+export const Dashboard: React.FC<DashboardProps> = ({
   account,
   store,
   onBackToRegister,
@@ -33,6 +41,13 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
   // Ingredients Count State (for disabling dish manager when empty)
   const [ingredientsCount, setIngredientsCount] = useState<number>(0);
   const [isLoadingIngredients, setIsLoadingIngredients] = useState<boolean>(true);
+
+  // Owner PIN Verification State
+  const [showPinModal, setShowPinModal] = useState<boolean>(false);
+  const [enteredPin, setEnteredPin] = useState<string>("");
+  const [pinError, setPinError] = useState<string | null>(null);
+  const [isVerifyingPin, setIsVerifyingPin] = useState<boolean>(false);
+  const [pendingAction, setPendingAction] = useState<ProtectedActionType>(null);
 
   const businessType = store.businessType || account.businessType || "cafe";
   const isCafe = businessType === "cafe";
@@ -81,7 +96,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
   const grossSales = metrics ? metrics.todaySales : (store as any).todaySales || 0;
   const completedOrders = metrics ? metrics.todayOrders : (store as any).todayOrders || 0;
 
-  // Sub-view 1: Ingredients & Raw Materials Management (Cafes & Restaurants)
+  // Sub-view 1: Ingredients & Raw Materials Management (Open for Staff Operational Tasks)
   if (currentView === "ingredients") {
     return (
       <ManageIngredientsPage
@@ -89,7 +104,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
         store={store}
         onBack={() => {
           setCurrentView("overview");
-          loadStoreData(); // Refreshes both metrics and ingredient count upon returning
+          loadStoreData(); // Refresh metrics and stock count upon returning
         }}
       />
     );
@@ -137,7 +152,45 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
     );
   }
 
-  // Check if Manage Menu Dishes should be blocked
+  // Trigger PIN challenge for protected actions
+  const triggerPinCheck = (action: ProtectedActionType) => {
+    setPendingAction(action);
+    setEnteredPin("");
+    setPinError(null);
+    setShowPinModal(true);
+  };
+
+  const handlePinSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!enteredPin.trim()) return;
+
+    setIsVerifyingPin(true);
+    setPinError(null);
+
+    try {
+      await verifyOwnerPin(account.id, enteredPin);
+      setShowPinModal(false);
+      setEnteredPin("");
+
+      if (pendingAction === "globalDashboard") {
+        onOpenGlobalDashboard();
+      } else if (
+        pendingAction === "DrinkBuild" ||
+        pendingAction === "restaurantMenu" ||
+        pendingAction === "catalogManage"
+      ) {
+        setCurrentView(pendingAction);
+      }
+      setPendingAction(null);
+    } catch (err: any) {
+      setPinError(err.message || "Invalid Owner PIN");
+      setEnteredPin("");
+    } finally {
+      setIsVerifyingPin(false);
+    }
+  };
+
+  // Check if Manage Menu Dishes should be blocked due to zero ingredients
   const isMenuDisabled =
     isRestaurant && !isLoadingIngredients && ingredientsCount === 0;
 
@@ -148,17 +201,17 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
         <div className="flex items-center gap-3">
           <span className="font-bold text-lg text-emerald-400">VistoOps</span>
           <span className="text-neutral-500">|</span>
-          <span className="text-sm font-medium text-neutral-200">Owner Dashboard</span>
+          <span className="text-sm font-medium text-neutral-200">Dashboard</span>
           <span className="text-xs text-neutral-400">({store.name || store.id})</span>
         </div>
 
         <div className="flex items-center gap-3">
           {storeCount > 1 && (
             <button
-              onClick={onOpenGlobalDashboard}
-              className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-emerald-400 border border-emerald-500/30 text-xs font-medium rounded transition"
+              onClick={() => triggerPinCheck("globalDashboard")}
+              className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-emerald-400 border border-emerald-500/30 text-xs font-medium rounded transition flex items-center gap-1.5"
             >
-              View Global Dashboard &rarr;
+              <span>🔒</span> View Global Dashboard &rarr;
             </button>
           )}
 
@@ -241,7 +294,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
           </h2>
 
           <div className={`grid gap-6 ${usesRecipeBOM ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"}`}>
-            {/* Card 1: Ingredients / Supplies (Rendered for Cafes & Restaurants) */}
+            {/* Card 1: Ingredients / Supplies (Operational: Unlocked for Staff) */}
             {usesRecipeBOM && (
               <button
                 onClick={() => setCurrentView("ingredients")}
@@ -256,8 +309,8 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                   </h3>
                   <p className="text-xs text-neutral-400 mt-1">
                     {isRestaurant
-                      ? "Track raw kitchen inventory, meat/produce units, and reorder levels."
-                      : "Adjust current raw stock levels, set units, and manage reorder alerts."}
+                      ? "Log deliveries, restock inventory, and calculate batch preparations."
+                      : "Adjust raw stock levels, log restocks, and manage reorder alerts."}
                   </p>
                 </div>
                 <span className="text-emerald-400 text-lg opacity-0 group-hover:opacity-100 transition translate-x-[-6px] group-hover:translate-x-0">
@@ -266,13 +319,16 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
               </button>
             )}
 
-            {/* Card 2: Distinct Product / Dish Builder (Disabled if no ingredients in restaurant) */}
+            {/* Card 2: Catalog / Dish Builder (Protected by Owner PIN) */}
             <button
               onClick={() => {
                 if (isMenuDisabled) return;
-                if (isCafe) setCurrentView("DrinkBuild");
-                else if (isRestaurant) setCurrentView("restaurantMenu");
-                else setCurrentView("catalogManage");
+                const targetAction = isCafe
+                  ? "DrinkBuild"
+                  : isRestaurant
+                  ? "restaurantMenu"
+                  : "catalogManage";
+                triggerPinCheck(targetAction);
               }}
               disabled={isMenuDisabled}
               className={`p-6 bg-neutral-900/80 border rounded-2xl text-left transition flex items-center justify-between group shadow-lg ${
@@ -286,9 +342,13 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                   <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20 group-hover:scale-110 transition">
                     {isCafe ? "☕" : isRestaurant ? "🍽️" : "🏷️"}
                   </div>
-                  {isMenuDisabled && (
+                  {isMenuDisabled ? (
                     <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
                       Add Kitchen Stock First
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-neutral-800 text-neutral-400 border border-neutral-700">
+                      🔒 PIN Protected
                     </span>
                   )}
                 </div>
@@ -326,6 +386,64 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
           </div>
         </div>
       </main>
+
+      {/* Owner PIN Verification Modal */}
+      {showPinModal && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl max-w-xs w-full p-6 shadow-2xl">
+            <div className="text-center mb-4">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 text-lg mb-2 border border-emerald-500/20">
+                🔒
+              </div>
+              <h3 className="text-base font-bold text-white">Owner Authorization</h3>
+              <p className="text-xs text-neutral-400 mt-1">
+                {pendingAction === "globalDashboard"
+                  ? "Accessing the global multi-branch dashboard requires owner authorization."
+                  : "Modifying menu items, recipes, and pricing requires owner authorization."}
+              </p>
+            </div>
+
+            {pinError && (
+              <div className="mb-4 p-2 rounded-lg bg-rose-500/10 border border-rose-500/30 text-xs text-rose-400 text-center">
+                {pinError}
+              </div>
+            )}
+
+            <form onSubmit={handlePinSubmit} className="space-y-4">
+              <input
+                type="password"
+                maxLength={6}
+                autoFocus
+                value={enteredPin}
+                onChange={(e) => setEnteredPin(e.target.value)}
+                placeholder="••••"
+                className="w-full text-center tracking-widest text-2xl py-2 px-3 bg-neutral-950 border border-neutral-800 rounded-xl text-white focus:outline-none focus:border-emerald-500 transition"
+              />
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPinModal(false);
+                    setPendingAction(null);
+                    setEnteredPin("");
+                  }}
+                  className="w-1/2 py-2 text-xs bg-neutral-800 hover:bg-neutral-700 rounded-xl text-neutral-300 font-medium transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!enteredPin.trim() || isVerifyingPin}
+                  className="w-1/2 py-2 text-xs bg-emerald-500 hover:bg-emerald-400 rounded-xl text-black font-bold transition disabled:opacity-50"
+                >
+                  {isVerifyingPin ? "Verifying..." : "Unlock"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

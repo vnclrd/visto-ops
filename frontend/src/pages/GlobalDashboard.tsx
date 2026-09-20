@@ -2,14 +2,14 @@ import React, { useState, useEffect } from "react";
 import type { ClientAccount, StoreItem } from "../types";
 import { fetchMetrics, type MetricsResult } from "../services/metricApi";
 
-interface OwnerGlobalDashboardProps {
+interface GlobalDashboardProps {
   account: ClientAccount;
   currentStore?: StoreItem | null;
   onBack: () => void;
   onSelectStore?: (store: StoreItem) => void;
 }
 
-export const OwnerGlobalDashboard: React.FC<OwnerGlobalDashboardProps> = ({
+export const GlobalDashboard: React.FC<GlobalDashboardProps> = ({
   account,
   currentStore,
   onBack,
