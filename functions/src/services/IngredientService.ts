@@ -28,14 +28,38 @@ export class IngredientService {
         throw new Error('Name and unit are required to create an ingredient');
       }
 
+      const trimmedName = data.name.trim();
+
+      // Duplicate Check (Case-insensitive)
+      const existingIngredients = await this.repo.getAllByStore(
+        clientId,
+        storeId,
+      );
+      const isDuplicate = existingIngredients.some(
+        (ing) =>
+          ing.isActive !== false &&
+          ing.name.trim().toLowerCase() === trimmedName.toLowerCase(),
+      );
+
+      if (isDuplicate) {
+        throw new Error(
+          `An ingredient or supply named "${trimmedName}" already exists in this store.`,
+        );
+      }
+
       const packagePrice = Number(data.packageSpecs?.packagePrice) || 0;
       const packageSize = Number(data.packageSpecs?.packageSize) || 0;
-      const costPerUnit = packageSize > 0 ? packagePrice / packageSize : 0;
+      const costPerUnit =
+        data?.costPerUnit !== undefined
+          ? Number(data.costPerUnit)
+          : packageSize > 0
+            ? packagePrice / packageSize
+            : 0;
 
       const isRaw = data.itemType === 'raw';
 
       const newRecord: Omit<IngredientRecord, 'id'> = {
-        name: data.name.trim(),
+        name: trimmedName,
         category: data.category?.trim() || 'General',
         unit: data.unit.trim(),
         currentStock: isRaw ? 0 : Number(data.currentStock) || 0,
@@ -45,8 +69,8 @@ export class IngredientService {
           packageSize,
         },
         costPerUnit,
-        itemType: data.itemType || 'direct', // <-- Add this
-        batchRecipe: data.batchRecipe || [], // <-- Add this
+        itemType: data.itemType || 'direct',
+        batchRecipe: data.batchRecipe || [],
         isActive: data.isActive !== undefined ? Boolean(data.isActive) : true,
       };
 

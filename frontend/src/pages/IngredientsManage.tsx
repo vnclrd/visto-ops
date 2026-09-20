@@ -22,7 +22,9 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  const [activeTab, setActiveTab] = useState<'activeStock' | 'rawBasis'>('activeStock');
+  const [activeTab, setActiveTab] = useState<'activeStock' | 'rawBasis'>(
+    'activeStock',
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
@@ -56,7 +58,7 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
           cardSubtitle:
             'Add raw materials (static price basis) or direct supplies (e.g. Eggs, Rice).',
           nameLabel: 'Item Name',
-          namePlaceholder: 'e.g. Beef Tenderloin, Soy Sauce, Rice, Egg',
+          namePlaceholder: 'e.g. Beef (Tapa), Hotdog, Rice, Egg',
           defaultCategory: 'Meat & Poultry',
           categories: [
             'Meat & Poultry',
@@ -107,7 +109,9 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
 
   // Form State
   const [newName, setNewName] = useState('');
-  const [newCategory, setNewCategory] = useState<string>(config.defaultCategory);
+  const [newCategory, setNewCategory] = useState<string>(
+    config.defaultCategory,
+  );
   const [newUnit, setNewUnit] = useState<string>(config.units[0].value);
   const [newPackagePrice, setNewPackagePrice] = useState('');
   const [newPackageSize, setNewPackageSize] = useState('');
@@ -152,11 +156,11 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
   }, [account.id, store.id]);
 
   const rawIngredients = ingredients.filter((i) =>
-    isRestaurant ? i.itemType === 'raw' : true
+    isRestaurant ? i.itemType === 'raw' : true,
   );
 
   const activeStockIngredients = ingredients.filter((i) =>
-    isRestaurant ? i.itemType !== 'raw' : true
+    isRestaurant ? i.itemType !== 'raw' : true,
   );
 
   useEffect(() => {
@@ -172,6 +176,23 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
   const handleAddIngredient = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
+
+    const trimmed = newName.trim();
+    if (!trimmed || parsedSize <= 0) {
+      setFormError('Valid name and package size are required.');
+      return;
+    }
+
+    const exists = ingredients.some(
+      (ing) =>
+        ing.isActive !== false &&
+        ing.name.trim().toLowerCase() === trimmed.toLowerCase(),
+    );
+
+    if (exists) {
+      setFormError(`An ingredient named "${trimmed}" already exists.`);
+      return;
+    }
 
     if (!newName.trim() || parsedSize <= 0) {
       setFormError('Valid name and package size are required.');
@@ -209,7 +230,7 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
           costPerUnit: previewCostPerUnit,
           itemType,
           isActive: true,
-        }
+        },
       );
 
       setIngredients((prev) => [created, ...prev]);
@@ -251,16 +272,18 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
   const addedStockUnits = incomingPacks * incomingPkgSize;
   const addedTotalValue = incomingPacks * incomingPkgPrice;
 
-  const projectedTotalStock = isRawBasisItem ? 0 : currentStockUnits + addedStockUnits;
+  const projectedTotalStock = isRawBasisItem
+    ? 0
+    : currentStockUnits + addedStockUnits;
   const projectedBlendedCost = isRawBasisItem
     ? incomingPkgSize > 0
       ? incomingPkgPrice / incomingPkgSize
       : 0
     : projectedTotalStock > 0
-    ? (currentTotalValue + addedTotalValue) / projectedTotalStock
-    : incomingPkgSize > 0
-    ? incomingPkgPrice / incomingPkgSize
-    : 0;
+      ? (currentTotalValue + addedTotalValue) / projectedTotalStock
+      : incomingPkgSize > 0
+        ? incomingPkgPrice / incomingPkgSize
+        : 0;
 
   const handleSaveRestockAndPrice = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -296,8 +319,8 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
                   },
                   costPerUnit: projectedBlendedCost,
                 }
-              : item
-          )
+              : item,
+          ),
         );
       } else {
         // Active inventory item: update stock and blended weighted cost
@@ -322,8 +345,8 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
                   },
                   costPerUnit: projectedBlendedCost,
                 }
-              : item
-          )
+              : item,
+          ),
         );
       }
 
@@ -337,7 +360,8 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
 
   // Batch Prep Handlers
   const activeBatchSelected =
-    rawIngredients.find((i) => i.id === selectedBatchIngId) || rawIngredients[0];
+    rawIngredients.find((i) => i.id === selectedBatchIngId) ||
+    rawIngredients[0];
 
   const handleAddIngredientToBatch = () => {
     const amt = parseFloat(batchIngAmount);
@@ -347,7 +371,7 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
     const lineCost = amt * unitCost;
 
     const existingIndex = batchRecipe.findIndex(
-      (b) => b.ingredientId === activeBatchSelected.id
+      (b) => b.ingredientId === activeBatchSelected.id,
     );
 
     if (existingIndex > -1) {
@@ -379,13 +403,19 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
     setBatchRecipe((prev) => prev.filter((b) => b.ingredientId !== ingId));
   };
 
-  const totalBatchCost = batchRecipe.reduce((sum, item) => sum + item.totalCost, 0);
+  const totalBatchCost = batchRecipe.reduce(
+    (sum, item) => sum + item.totalCost,
+    0,
+  );
   const yieldCount = parseFloat(batchYieldPortions) || 1;
-  const computedUnitCostPerPortion = yieldCount > 0 ? totalBatchCost / yieldCount : 0;
+  const computedUnitCostPerPortion =
+    yieldCount > 0 ? totalBatchCost / yieldCount : 0;
 
   const handleSaveBatchAsIngredient = async () => {
     if (!batchItemName.trim() || yieldCount <= 0 || batchRecipe.length === 0) {
-      alert('Please provide a batch item name, yield portion count, and at least one ingredient.');
+      alert(
+        'Please provide a batch item name, yield portion count, and at least one ingredient.',
+      );
       return;
     }
 
@@ -410,7 +440,7 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
           },
           costPerUnit: computedUnitCostPerPortion,
           isActive: true,
-        }
+        },
       );
 
       setIngredients((prev) => [created, ...prev]);
@@ -433,7 +463,7 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
     : ingredients;
 
   const uniqueStoredCategories = Array.from(
-    new Set(activeDataset.map((item) => item.category).filter(Boolean))
+    new Set(activeDataset.map((item) => item.category).filter(Boolean)),
   );
   const filterCategories = [
     'All',
@@ -441,77 +471,88 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
   ];
 
   const filtered = activeDataset.filter((item) => {
-    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'All' || item.category === selectedCategory;
+    const matchesSearch = item.name
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
+    const matchesCategory =
+      selectedCategory === 'All' || item.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
   const shouldShowStockInputs = !isRestaurant || trackLiveStock;
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-white flex flex-col select-none">
+    <div className='min-h-screen bg-neutral-950 text-white flex flex-col select-none'>
       {/* Header */}
-      <header className="h-14 border-b border-neutral-800 px-6 flex items-center justify-between bg-neutral-900 sticky top-0 z-20">
-        <div className="flex items-center gap-3">
-          <span className="font-bold text-lg text-emerald-400">VistoOps</span>
-          <span className="text-neutral-600">/</span>
-          <span className="text-sm font-medium text-neutral-400">{store.name || store.id}</span>
-          <span className="text-neutral-600">/</span>
-          <span className="text-sm font-semibold text-neutral-100">{config.headerTitle}</span>
+      <header className='h-14 border-b border-neutral-800 px-6 flex items-center justify-between bg-neutral-900 sticky top-0 z-20'>
+        <div className='flex items-center gap-3'>
+          <span className='font-bold text-lg text-emerald-400'>VistoOps</span>
+          <span className='text-neutral-600'>/</span>
+          <span className='text-sm font-medium text-neutral-400'>
+            {store.name || store.id}
+          </span>
+          <span className='text-neutral-600'>/</span>
+          <span className='text-sm font-semibold text-neutral-100'>
+            {config.headerTitle}
+          </span>
         </div>
         <button
           onClick={onBack}
-          className="px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-xs font-medium rounded text-neutral-200 transition"
+          className='px-3 py-1.5 bg-neutral-800 hover:bg-neutral-700 text-xs font-medium rounded text-neutral-200 transition'
         >
           &larr; Back to Dashboard
         </button>
       </header>
 
-      <main className="flex-1 p-8 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <main className='flex-1 p-8 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-3 gap-8'>
         {/* Left Column: Intake Registration Form */}
-        <div className="lg:col-span-1">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 sticky top-20 shadow-xl">
-            <div className="mb-4">
-              <h2 className="text-lg font-bold text-white mb-0.5">{config.cardTitle}</h2>
-              <p className="text-xs text-neutral-400">{config.cardSubtitle}</p>
+        <div className='lg:col-span-1'>
+          <div className='bg-neutral-900 border border-neutral-800 rounded-2xl p-6 sticky top-20 shadow-xl'>
+            <div className='mb-4'>
+              <h2 className='text-lg font-bold text-white mb-0.5'>
+                {config.cardTitle}
+              </h2>
+              <p className='text-xs text-neutral-400'>{config.cardSubtitle}</p>
             </div>
 
             {isRestaurant && (
               <button
-                type="button"
+                type='button'
                 onClick={() => {
                   if (rawIngredients.length > 0 && !selectedBatchIngId) {
                     setSelectedBatchIngId(rawIngredients[0].id);
                   }
                   setShowBatchModal(true);
                 }}
-                className="w-full mb-4 py-2.5 px-3 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition shadow active:scale-[0.99]"
+                className='w-full mb-4 py-2.5 px-3 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition shadow active:scale-[0.99]'
               >
                 <span>🥘</span> Open Batch Prep Calculator
               </button>
             )}
 
             {formError && (
-              <div className="mb-4 rounded-lg bg-rose-500/10 border border-rose-500/30 p-2.5 text-xs text-rose-400">
+              <div className='mb-4 rounded-lg bg-rose-500/10 border border-rose-500/30 p-2.5 text-xs text-rose-400'>
                 {formError}
               </div>
             )}
 
-            <form onSubmit={handleAddIngredient} className="space-y-4">
+            <form onSubmit={handleAddIngredient} className='space-y-4'>
               {isRestaurant && (
-                <div className="p-3 bg-neutral-950 rounded-xl border border-neutral-800 flex items-center justify-between">
+                <div className='p-3 bg-neutral-950 rounded-xl border border-neutral-800 flex items-center justify-between'>
                   <div>
-                    <p className="text-xs font-semibold text-neutral-200">
-                      {trackLiveStock ? 'Direct Inventory Item' : 'Raw Cost Basis Material'}
+                    <p className='text-xs font-semibold text-neutral-200'>
+                      {trackLiveStock
+                        ? 'Direct Inventory Item'
+                        : 'Raw Cost Basis Material'}
                     </p>
-                    <p className="text-[10px] text-neutral-400">
+                    <p className='text-[10px] text-neutral-400'>
                       {trackLiveStock
                         ? 'Has live stock count (e.g. Eggs, Rice cups)'
                         : 'Price basis for batch preps (no live stock)'}
                     </p>
                   </div>
                   <button
-                    type="button"
+                    type='button'
                     onClick={() => setTrackLiveStock(!trackLiveStock)}
                     className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors ${
                       trackLiveStock ? 'bg-emerald-500' : 'bg-neutral-800'
@@ -527,28 +568,28 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
               )}
 
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">
+                <label className='block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5'>
                   {config.nameLabel}
                 </label>
                 <input
-                  type="text"
+                  type='text'
                   required
                   placeholder={config.namePlaceholder}
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  className="w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3.5 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 transition"
+                  className='w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3.5 py-2 text-sm text-white focus:outline-none focus:border-emerald-500 transition'
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className='grid grid-cols-2 gap-3'>
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">
+                  <label className='block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5'>
                     Category
                   </label>
                   <select
                     value={newCategory}
                     onChange={(e) => setNewCategory(e.target.value)}
-                    className="w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                    className='w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500'
                   >
                     {config.categories.map((cat) => (
                       <option key={cat} value={cat}>
@@ -558,13 +599,13 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">
+                  <label className='block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5'>
                     Unit
                   </label>
                   <select
                     value={newUnit}
                     onChange={(e) => setNewUnit(e.target.value)}
-                    className="w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                    className='w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500'
                   >
                     {config.units.map((u) => (
                       <option key={u.value} value={u.value}>
@@ -575,79 +616,83 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
                 </div>
               </div>
 
-              <div className="p-3.5 bg-neutral-950 rounded-xl border border-neutral-800/80 space-y-3">
-                <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
+              <div className='p-3.5 bg-neutral-950 rounded-xl border border-neutral-800/80 space-y-3'>
+                <p className='text-[11px] font-semibold text-neutral-400 uppercase tracking-wider'>
                   Purchasing Price Specs
                 </p>
-                <div className="grid grid-cols-2 gap-3">
+                <div className='grid grid-cols-2 gap-3'>
                   <div>
-                    <label className="block text-xs text-neutral-400 mb-1">Package Price</label>
+                    <label className='block text-xs text-neutral-400 mb-1'>
+                      Package Price
+                    </label>
                     <input
-                      type="number"
-                      step="0.01"
+                      type='number'
+                      step='0.01'
                       required
-                      placeholder="₱120.00"
+                      placeholder='₱120.00'
                       value={newPackagePrice}
                       onChange={(e) => setNewPackagePrice(e.target.value)}
-                      className="w-full rounded-lg bg-neutral-900 border border-neutral-800 px-3 py-1.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+                      className='w-full rounded-lg bg-neutral-900 border border-neutral-800 px-3 py-1.5 text-sm text-white focus:outline-none focus:border-emerald-500'
                     />
                   </div>
                   <div>
-                    <label className="block text-xs text-neutral-400 mb-1">
+                    <label className='block text-xs text-neutral-400 mb-1'>
                       Net Size ({newUnit})
                     </label>
                     <input
-                      type="number"
+                      type='number'
                       required
-                      placeholder="1000"
+                      placeholder='1000'
                       value={newPackageSize}
                       onChange={(e) => setNewPackageSize(e.target.value)}
-                      className="w-full rounded-lg bg-neutral-900 border border-neutral-800 px-3 py-1.5 text-sm text-white focus:outline-none focus:border-emerald-500"
+                      className='w-full rounded-lg bg-neutral-900 border border-neutral-800 px-3 py-1.5 text-sm text-white focus:outline-none focus:border-emerald-500'
                     />
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center pt-2 border-t border-neutral-800 text-xs">
-                  <span className="text-neutral-400">Calculated Unit Cost:</span>
-                  <span className="font-semibold text-emerald-400">
+                <div className='flex justify-between items-center pt-2 border-t border-neutral-800 text-xs'>
+                  <span className='text-neutral-400'>
+                    Calculated Unit Cost:
+                  </span>
+                  <span className='font-semibold text-emerald-400'>
                     ₱{previewCostPerUnit.toFixed(4)} / {newUnit}
                   </span>
                 </div>
               </div>
 
               {shouldShowStockInputs && (
-                <div className="grid grid-cols-2 gap-3">
+                <div className='grid grid-cols-2 gap-3'>
                   <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">
+                    <label className='block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5'>
                       Initial Stock (Packs)
                     </label>
                     <input
-                      type="number"
-                      min="1"
+                      type='number'
+                      min='1'
                       value={newInitialPacks}
                       onChange={(e) => setNewInitialPacks(e.target.value)}
-                      className="w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                      className='w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500'
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">
+                    <label className='block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5'>
                       Alert Level ({newUnit})
                     </label>
                     <input
-                      type="number"
-                      placeholder="Min"
+                      type='number'
+                      placeholder='Min'
                       value={newReorder}
                       onChange={(e) => setNewReorder(e.target.value)}
-                      className="w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                      className='w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500'
                     />
                   </div>
                 </div>
               )}
 
               <button
-                type="submit"
+                type='submit'
                 disabled={isSubmitting}
-                className="w-full mt-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 py-2.5 px-4 text-xs font-bold text-black uppercase tracking-wider transition disabled:opacity-50"
+                className='w-full mt-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 py-2.5 px-4 text-xs font-bold text-black uppercase tracking-wider transition disabled:opacity-50'
               >
                 {isSubmitting ? 'Registering...' : config.submitBtn}
               </button>
@@ -656,9 +701,9 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
         </div>
 
         {/* Right Column: Inventory Table with Tabs */}
-        <div className="lg:col-span-2 space-y-4">
+        <div className='lg:col-span-2 space-y-4'>
           {isRestaurant && (
-            <div className="flex gap-2 border-b border-neutral-800 pb-2">
+            <div className='flex gap-2 border-b border-neutral-800 pb-2'>
               <button
                 onClick={() => {
                   setActiveTab('activeStock');
@@ -688,17 +733,19 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
             </div>
           )}
 
-          <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+          <div className='flex flex-col sm:flex-row gap-3 items-center justify-between'>
             <input
-              type="text"
+              type='text'
               placeholder={`Search ${
-                activeTab === 'activeStock' ? 'active/prepped supplies' : 'raw materials'
+                activeTab === 'activeStock'
+                  ? 'active/prepped supplies'
+                  : 'raw materials'
               }...`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full sm:w-64 rounded-lg bg-neutral-900 border border-neutral-800 px-3.5 py-2 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-emerald-500"
+              className='w-full sm:w-64 rounded-lg bg-neutral-900 border border-neutral-800 px-3.5 py-2 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-emerald-500'
             />
-            <div className="flex flex-wrap gap-1.5 w-full sm:w-auto pb-1">
+            <div className='flex flex-wrap gap-1.5 w-full sm:w-auto pb-1'>
               {filterCategories.map((cat) => (
                 <button
                   key={cat}
@@ -715,59 +762,70 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
             </div>
           </div>
 
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden shadow-xl">
+          <div className='bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden shadow-xl'>
             {isLoading ? (
-              <div className="p-12 text-center text-xs text-neutral-400">Loading inventory...</div>
+              <div className='p-12 text-center text-xs text-neutral-400'>
+                Loading inventory...
+              </div>
             ) : fetchError ? (
-              <div className="p-8 text-center text-xs text-rose-400">
+              <div className='p-8 text-center text-xs text-rose-400'>
                 {fetchError}
-                <button onClick={loadData} className="block mx-auto mt-2 text-emerald-400 hover:underline">
+                <button
+                  onClick={loadData}
+                  className='block mx-auto mt-2 text-emerald-400 hover:underline'
+                >
                   Try Again
                 </button>
               </div>
             ) : (
-              <table className="w-full text-left text-xs">
-                <thead className="bg-neutral-950/80 border-b border-neutral-800 text-neutral-400 uppercase font-semibold">
+              <table className='w-full text-left text-xs'>
+                <thead className='bg-neutral-950/80 border-b border-neutral-800 text-neutral-400 uppercase font-semibold'>
                   <tr>
-                    <th className="px-5 py-3.5">
-                      {activeTab === 'activeStock' ? 'Active Supply' : 'Raw Material (Basis)'}
+                    <th className='px-5 py-3.5'>
+                      {activeTab === 'activeStock'
+                        ? 'Active Supply'
+                        : 'Raw Material (Basis)'}
                     </th>
-                    <th className="px-4 py-3.5">Package Specs</th>
-                    <th className="px-4 py-3.5">Unit Cost</th>
+                    <th className='px-4 py-3.5'>Package Specs</th>
+                    <th className='px-4 py-3.5'>Unit Cost</th>
                     {(activeTab === 'activeStock' || !isRestaurant) && (
-                      <th className="px-4 py-3.5">Current Stock</th>
+                      <th className='px-4 py-3.5'>Current Stock</th>
                     )}
-                    <th className="px-5 py-3.5 text-right">Actions</th>
+                    <th className='px-5 py-3.5 text-right'>Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-neutral-800/60">
+                <tbody className='divide-y divide-neutral-800/60'>
                   {filtered.map((item) => (
-                    <tr key={item.id} className="hover:bg-neutral-800/40 transition">
-                      <td className="px-5 py-4 font-semibold text-neutral-200">
-                        <div className="flex items-center gap-1.5">
+                    <tr
+                      key={item.id}
+                      className='hover:bg-neutral-800/40 transition'
+                    >
+                      <td className='px-5 py-4 font-semibold text-neutral-200'>
+                        <div className='flex items-center gap-1.5'>
                           {item.itemType === 'prepped' && <span>🥘</span>}
                           {item.name}
                         </div>
-                        <span className="text-[10px] text-neutral-500">
-                          {item.category} {item.itemType ? `• ${item.itemType}` : ''}
+                        <span className='text-[10px] text-neutral-500'>
+                          {item.category}{' '}
+                          {item.itemType ? `• ${item.itemType}` : ''}
                         </span>
                       </td>
-                      <td className="px-4 py-4 text-neutral-300">
+                      <td className='px-4 py-4 text-neutral-300'>
                         ₱{(item.packageSpecs?.packagePrice ?? 0).toFixed(2)} /{' '}
                         {item.packageSpecs?.packageSize ?? 0} {item.unit}
                       </td>
-                      <td className="px-4 py-4 font-medium text-emerald-400">
+                      <td className='px-4 py-4 font-medium text-emerald-400'>
                         ₱{item.costPerUnit.toFixed(4)} / {item.unit}
                       </td>
                       {(activeTab === 'activeStock' || !isRestaurant) && (
-                        <td className="px-4 py-4 text-white font-semibold">
+                        <td className='px-4 py-4 text-white font-semibold'>
                           {item.currentStock.toLocaleString()} {item.unit}
                         </td>
                       )}
-                      <td className="px-5 py-4 text-right">
+                      <td className='px-5 py-4 text-right'>
                         <button
                           onClick={() => openRestockModal(item)}
-                          className="px-3 py-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 hover:text-emerald-400 border border-neutral-700 rounded text-xs transition"
+                          className='px-3 py-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 hover:text-emerald-400 border border-neutral-700 rounded text-xs transition'
                         >
                           Restock / Cost
                         </button>
@@ -779,7 +837,7 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
             )}
 
             {!isLoading && !fetchError && filtered.length === 0 && (
-              <div className="p-8 text-center text-neutral-500 text-xs">
+              <div className='p-8 text-center text-neutral-500 text-xs'>
                 {activeTab === 'activeStock'
                   ? 'No active stock or prepped items created yet.'
                   : 'No raw basis materials found.'}
@@ -791,112 +849,123 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
 
       {/* Restock & Price Adjustment Modal with Weighted Average Cost */}
       {editingItem && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl max-w-md w-full p-6 shadow-2xl">
-            <h3 className="text-base font-bold text-white mb-1">
-              {isRawBasisItem ? 'Adjust Material Cost' : 'Restock & Adjust Cost'}
+        <div className='fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4'>
+          <div className='bg-neutral-900 border border-neutral-800 rounded-2xl max-w-md w-full p-6 shadow-2xl'>
+            <h3 className='text-base font-bold text-white mb-1'>
+              {isRawBasisItem
+                ? 'Adjust Material Cost'
+                : 'Restock & Adjust Cost'}
             </h3>
-            <p className="text-xs text-neutral-400 mb-4">
+            <p className='text-xs text-neutral-400 mb-4'>
               {isRawBasisItem
                 ? `Update the purchasing price benchmark for ${editingItem.name}.`
                 : `Receive incoming stock for ${editingItem.name}. Unit cost is blended automatically.`}
             </p>
 
             {editError && (
-              <div className="mb-4 rounded-lg bg-rose-500/10 border border-rose-500/30 p-2.5 text-xs text-rose-400">
+              <div className='mb-4 rounded-lg bg-rose-500/10 border border-rose-500/30 p-2.5 text-xs text-rose-400'>
                 {editError}
               </div>
             )}
 
-            <form onSubmit={handleSaveRestockAndPrice} className="space-y-4">
+            <form onSubmit={handleSaveRestockAndPrice} className='space-y-4'>
               {!isRawBasisItem && (
-                <div className="p-3 bg-neutral-950 rounded-xl border border-neutral-800 flex justify-between text-xs">
-                  <span className="text-neutral-400">Current Stock:</span>
-                  <span className="font-semibold text-white">
-                    {editingItem.currentStock} {editingItem.unit} @ ₱{editingItem.costPerUnit.toFixed(4)}/ea
+                <div className='p-3 bg-neutral-950 rounded-xl border border-neutral-800 flex justify-between text-xs'>
+                  <span className='text-neutral-400'>Current Stock:</span>
+                  <span className='font-semibold text-white'>
+                    {editingItem.currentStock} {editingItem.unit} @ ₱
+                    {editingItem.costPerUnit.toFixed(4)}/ea
                   </span>
                 </div>
               )}
 
               {!isRawBasisItem && (
                 <div>
-                  <label className="block text-xs text-neutral-400 mb-1">
+                  <label className='block text-xs text-neutral-400 mb-1'>
                     Incoming Quantity (Number of Packs / Deliveries)
                   </label>
                   <input
-                    type="number"
-                    min="1"
+                    type='number'
+                    min='1'
                     required
                     value={restockPacks}
                     onChange={(e) => setRestockPacks(e.target.value)}
-                    className="w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                    className='w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500'
                   />
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className='grid grid-cols-2 gap-3'>
                 <div>
-                  <label className="block text-xs text-neutral-400 mb-1">
-                    {isRawBasisItem ? 'New Package Price (₱)' : 'Delivery Price per Pack (₱)'}
+                  <label className='block text-xs text-neutral-400 mb-1'>
+                    {isRawBasisItem
+                      ? 'New Package Price (₱)'
+                      : 'Delivery Price per Pack (₱)'}
                   </label>
                   <input
-                    type="number"
-                    step="0.01"
+                    type='number'
+                    step='0.01'
                     required
                     value={editPackagePrice}
                     onChange={(e) => setEditPackagePrice(e.target.value)}
-                    className="w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                    className='w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500'
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs text-neutral-400 mb-1">
+                  <label className='block text-xs text-neutral-400 mb-1'>
                     Net Size per Pack ({editingItem.unit})
                   </label>
                   <input
-                    type="number"
+                    type='number'
                     required
                     value={editPackageSize}
                     onChange={(e) => setEditPackageSize(e.target.value)}
-                    className="w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                    className='w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500'
                   />
                 </div>
               </div>
 
               {/* Live Preview of Weighted Average Result */}
-              <div className="p-3 bg-neutral-950 rounded-xl border border-neutral-800 space-y-1 text-xs">
+              <div className='p-3 bg-neutral-950 rounded-xl border border-neutral-800 space-y-1 text-xs'>
                 {!isRawBasisItem && (
-                  <div className="flex justify-between">
-                    <span className="text-neutral-400">New Total Stock:</span>
-                    <span className="font-semibold text-white">
+                  <div className='flex justify-between'>
+                    <span className='text-neutral-400'>New Total Stock:</span>
+                    <span className='font-semibold text-white'>
                       {projectedTotalStock} {editingItem.unit}
                     </span>
                   </div>
                 )}
-                <div className="flex justify-between items-center pt-1 border-t border-neutral-800/80">
-                  <span className="text-neutral-400">
-                    {isRawBasisItem ? 'New Unit Cost:' : 'New Blended Cost (WAC):'}
+                <div className='flex justify-between items-center pt-1 border-t border-neutral-800/80'>
+                  <span className='text-neutral-400'>
+                    {isRawBasisItem
+                      ? 'New Unit Cost:'
+                      : 'New Blended Cost (WAC):'}
                   </span>
-                  <span className="text-emerald-400 font-bold">
+                  <span className='text-emerald-400 font-bold'>
                     ₱{projectedBlendedCost.toFixed(4)} / {editingItem.unit}
                   </span>
                 </div>
               </div>
 
-              <div className="flex gap-2 pt-2">
+              <div className='flex gap-2 pt-2'>
                 <button
-                  type="button"
+                  type='button'
                   onClick={() => setEditingItem(null)}
-                  className="w-1/2 py-2 text-xs bg-neutral-800 hover:bg-neutral-700 rounded-lg text-neutral-300 font-medium transition"
+                  className='w-1/2 py-2 text-xs bg-neutral-800 hover:bg-neutral-700 rounded-lg text-neutral-300 font-medium transition'
                 >
                   Cancel
                 </button>
                 <button
-                  type="submit"
+                  type='submit'
                   disabled={isSavingEdit}
-                  className="w-1/2 py-2 text-xs bg-emerald-500 hover:bg-emerald-400 rounded-lg text-black font-semibold transition disabled:opacity-50"
+                  className='w-1/2 py-2 text-xs bg-emerald-500 hover:bg-emerald-400 rounded-lg text-black font-semibold transition disabled:opacity-50'
                 >
-                  {isSavingEdit ? 'Saving...' : isRawBasisItem ? 'Save Cost' : 'Confirm Restock'}
+                  {isSavingEdit
+                    ? 'Saving...'
+                    : isRawBasisItem
+                      ? 'Save Cost'
+                      : 'Confirm Restock'}
                 </button>
               </div>
             </form>
@@ -906,119 +975,136 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
 
       {/* Batch Prep Modal */}
       {showBatchModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl flex flex-col max-h-[90vh]">
-            <div className="flex justify-between items-start border-b border-neutral-800 pb-3 mb-4">
+        <div className='fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4'>
+          <div className='bg-neutral-900 border border-neutral-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl flex flex-col max-h-[90vh]'>
+            <div className='flex justify-between items-start border-b border-neutral-800 pb-3 mb-4'>
               <div>
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                <h3 className='text-base font-bold text-white flex items-center gap-2'>
                   <span>🥘</span> Batch Prep Cost Calculator
                 </h3>
-                <p className="text-xs text-neutral-400 mt-0.5">
-                  Combine raw ingredients into prepped portions (e.g. Marinated Beef Tapa).
+                <p className='text-xs text-neutral-400 mt-0.5'>
+                  Combine raw ingredients into prepped portions (e.g. Marinated
+                  Beef Tapa).
                 </p>
               </div>
               <button
                 onClick={() => setShowBatchModal(false)}
-                className="text-neutral-500 hover:text-white text-lg leading-none"
+                className='text-neutral-500 hover:text-white text-lg leading-none'
               >
                 ✕
               </button>
             </div>
 
-            <div className="overflow-y-auto flex-1 space-y-4 pr-1">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="sm:col-span-2">
-                  <label className="block text-xs text-neutral-400 mb-1">Prepped Item Name</label>
+            <div className='overflow-y-auto flex-1 space-y-4 pr-1'>
+              <div className='grid grid-cols-1 sm:grid-cols-3 gap-3'>
+                <div className='sm:col-span-2'>
+                  <label className='block text-xs text-neutral-400 mb-1'>
+                    Prepped Item Name
+                  </label>
                   <input
-                    type="text"
-                    placeholder="e.g. Prepped Beef Tapa"
+                    type='text'
+                    placeholder='e.g. Prepped Beef Tapa'
                     value={batchItemName}
                     onChange={(e) => setBatchItemName(e.target.value)}
-                    className="w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                    className='w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500'
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs text-neutral-400 mb-1">Yield (Portions)</label>
+                  <label className='block text-xs text-neutral-400 mb-1'>
+                    Yield (Portions)
+                  </label>
                   <input
-                    type="number"
-                    placeholder="125"
+                    type='number'
+                    placeholder='125'
                     value={batchYieldPortions}
                     onChange={(e) => setBatchYieldPortions(e.target.value)}
-                    className="w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                    className='w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500'
                   />
                 </div>
               </div>
 
-              <div className="p-3 bg-neutral-950 rounded-xl border border-neutral-800 space-y-3">
-                <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
+              <div className='p-3 bg-neutral-950 rounded-xl border border-neutral-800 space-y-3'>
+                <p className='text-[11px] font-semibold text-neutral-400 uppercase tracking-wider'>
                   Add Raw Material to Batch
                 </p>
-                <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end">
-                  <div className="sm:col-span-6">
-                    <label className="block text-[11px] text-neutral-500 mb-1">Raw Basis Item</label>
+                <div className='grid grid-cols-1 sm:grid-cols-12 gap-2 items-end'>
+                  <div className='sm:col-span-6'>
+                    <label className='block text-[11px] text-neutral-500 mb-1'>
+                      Raw Basis Item
+                    </label>
                     <select
-                      value={selectedBatchIngId || (activeBatchSelected ? activeBatchSelected.id : '')}
+                      value={
+                        selectedBatchIngId ||
+                        (activeBatchSelected ? activeBatchSelected.id : '')
+                      }
                       onChange={(e) => setSelectedBatchIngId(e.target.value)}
-                      className="w-full rounded-lg bg-neutral-900 border border-neutral-800 px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                      className='w-full rounded-lg bg-neutral-900 border border-neutral-800 px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500'
                     >
                       {rawIngredients.map((ing) => (
                         <option key={ing.id} value={ing.id}>
-                          {ing.name} (₱{Number(ing.costPerUnit || 0).toFixed(4)}/{ing.unit})
+                          {ing.name} (₱{Number(ing.costPerUnit || 0).toFixed(4)}
+                          /{ing.unit})
                         </option>
                       ))}
                     </select>
                   </div>
 
-                  <div className="sm:col-span-3">
-                    <label className="block text-[11px] text-neutral-500 mb-1">
+                  <div className='sm:col-span-3'>
+                    <label className='block text-[11px] text-neutral-500 mb-1'>
                       Amount ({activeBatchSelected?.unit || 'unit'})
                     </label>
                     <input
-                      type="number"
-                      step="any"
-                      placeholder={activeBatchSelected?.unit === 'ml' ? '1500' : '1000'}
+                      type='number'
+                      step='any'
+                      placeholder={
+                        activeBatchSelected?.unit === 'ml' ? '1500' : '1000'
+                      }
                       value={batchIngAmount}
                       onChange={(e) => setBatchIngAmount(e.target.value)}
-                      className="w-full rounded-lg bg-neutral-900 border border-neutral-800 px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500"
+                      className='w-full rounded-lg bg-neutral-900 border border-neutral-800 px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500'
                     />
                   </div>
 
-                  <div className="sm:col-span-3">
+                  <div className='sm:col-span-3'>
                     <button
-                      type="button"
+                      type='button'
                       onClick={handleAddIngredientToBatch}
-                      className="w-full py-1.5 bg-neutral-800 hover:bg-neutral-700 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs font-semibold transition"
+                      className='w-full py-1.5 bg-neutral-800 hover:bg-neutral-700 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs font-semibold transition'
                     >
                       + Add
                     </button>
                   </div>
                 </div>
 
-                <div className="border border-neutral-800 rounded-lg overflow-hidden mt-2">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-neutral-900 text-neutral-400 uppercase font-semibold">
+                <div className='border border-neutral-800 rounded-lg overflow-hidden mt-2'>
+                  <table className='w-full text-left text-xs'>
+                    <thead className='bg-neutral-900 text-neutral-400 uppercase font-semibold'>
                       <tr>
-                        <th className="px-3 py-2">Raw Ingredient</th>
-                        <th className="px-2 py-2">Amount</th>
-                        <th className="px-2 py-2">Cost</th>
-                        <th className="px-2 py-2 text-right">Action</th>
+                        <th className='px-3 py-2'>Raw Ingredient</th>
+                        <th className='px-2 py-2'>Amount</th>
+                        <th className='px-2 py-2'>Cost</th>
+                        <th className='px-2 py-2 text-right'>Action</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-neutral-800/60">
+                    <tbody className='divide-y divide-neutral-800/60'>
                       {batchRecipe.map((b) => (
                         <tr key={b.ingredientId}>
-                          <td className="px-3 py-2 text-neutral-200">{b.name}</td>
-                          <td className="px-2 py-2 text-neutral-400">
+                          <td className='px-3 py-2 text-neutral-200'>
+                            {b.name}
+                          </td>
+                          <td className='px-2 py-2 text-neutral-400'>
                             {b.amount} {b.unit}
                           </td>
-                          <td className="px-2 py-2 text-emerald-400 font-medium">
+                          <td className='px-2 py-2 text-emerald-400 font-medium'>
                             ₱{b.totalCost.toFixed(2)}
                           </td>
-                          <td className="px-2 py-2 text-right">
+                          <td className='px-2 py-2 text-right'>
                             <button
-                              onClick={() => handleRemoveBatchIngredient(b.ingredientId)}
-                              className="text-neutral-500 hover:text-rose-400 text-xs"
+                              onClick={() =>
+                                handleRemoveBatchIngredient(b.ingredientId)
+                              }
+                              className='text-neutral-500 hover:text-rose-400 text-xs'
                             >
                               ✕
                             </button>
@@ -1028,40 +1114,50 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
                     </tbody>
                   </table>
                   {batchRecipe.length === 0 && (
-                    <div className="p-4 text-center text-xs text-neutral-500">
+                    <div className='p-4 text-center text-xs text-neutral-500'>
                       No ingredients added to this batch yet.
                     </div>
                   )}
                 </div>
               </div>
 
-              <div className="p-4 bg-neutral-950 rounded-xl border border-neutral-800 flex items-center justify-between text-xs">
+              <div className='p-4 bg-neutral-950 rounded-xl border border-neutral-800 flex items-center justify-between text-xs'>
                 <div>
-                  <span className="text-neutral-400 block">Total Batch Cost:</span>
-                  <span className="text-base font-bold text-white">₱{totalBatchCost.toFixed(2)}</span>
+                  <span className='text-neutral-400 block'>
+                    Total Batch Cost:
+                  </span>
+                  <span className='text-base font-bold text-white'>
+                    ₱{totalBatchCost.toFixed(2)}
+                  </span>
                 </div>
-                <div className="text-right">
-                  <span className="text-neutral-400 block">Portion Cost ({yieldCount} yields):</span>
-                  <span className="text-base font-bold text-emerald-400">
+                <div className='text-right'>
+                  <span className='text-neutral-400 block'>
+                    Portion Cost ({yieldCount} yields):
+                  </span>
+                  <span className='text-base font-bold text-emerald-400'>
                     ₱{computedUnitCostPerPortion.toFixed(4)} / portion
                   </span>
                 </div>
               </div>
             </div>
 
-            <div className="flex gap-2 pt-4 border-t border-neutral-800 mt-4">
+            <div className='flex gap-2 pt-4 border-t border-neutral-800 mt-4'>
               <button
-                type="button"
+                type='button'
                 onClick={() => setShowBatchModal(false)}
-                className="w-1/3 py-2 text-xs bg-neutral-800 hover:bg-neutral-700 rounded-lg text-neutral-300 font-medium transition"
+                className='w-1/3 py-2 text-xs bg-neutral-800 hover:bg-neutral-700 rounded-lg text-neutral-300 font-medium transition'
               >
                 Cancel
               </button>
               <button
-                type="button"
+                type='button'
                 onClick={handleSaveBatchAsIngredient}
-                disabled={isSubmitting || !batchItemName.trim() || batchRecipe.length === 0}
-                className="w-2/3 py-2 text-xs bg-emerald-500 hover:bg-emerald-400 rounded-lg text-black font-bold uppercase tracking-wider transition disabled:opacity-50"
+                disabled={
+                  isSubmitting ||
+                  !batchItemName.trim() ||
+                  batchRecipe.length === 0
+                }
+                className='w-2/3 py-2 text-xs bg-emerald-500 hover:bg-emerald-400 rounded-lg text-black font-bold uppercase tracking-wider transition disabled:opacity-50'
               >
                 {isSubmitting ? 'Saving...' : 'Save as Active Batch Inventory'}
               </button>
