@@ -22,6 +22,15 @@ export interface VerifyPinResult { // visto-accountVerifyPin
   verified: boolean;
 }
 
+export interface BatchRecipeIngredient {
+  ingredientId: string;
+  name: string;
+  unit: string;
+  amount: number;
+  costPerUnit: number;
+  totalCost: number;
+}
+
 export interface IngredientRecord { // visto-cafe-ingredientsGet
   id: string;
   name: string;
@@ -34,6 +43,8 @@ export interface IngredientRecord { // visto-cafe-ingredientsGet
     packagePrice: number;
     packageSize: number;
   };
+  itemType?: "raw" | "prepped" | "direct";
+  batchRecipe?: BatchRecipeIngredient[];
   isActive: boolean;
   createdAt?: string;
   updatedAt?: string;

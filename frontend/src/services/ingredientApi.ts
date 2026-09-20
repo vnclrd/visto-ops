@@ -1,4 +1,4 @@
-import type { IngredientRecord } from "../types";
+import type { IngredientRecord, BatchRecipeIngredient } from "../types";
 
 const BASE_URL = import.meta.env.VITE_API_URL;
 
@@ -27,6 +27,8 @@ export interface IngredientManagePayload {
     packagePrice: number;
     packageSize: number;
   };
+  itemType?: "raw" | "prepped" | "direct";
+  batchRecipe?: BatchRecipeIngredient[];
   isActive?: boolean;
 }
 

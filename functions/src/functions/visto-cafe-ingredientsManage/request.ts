@@ -1,3 +1,5 @@
+import type { BatchRecipeIngredient } from "../../types";
+
 export type IngredientManageOperation = "create" | "update" | "delete";
 
 export interface IngredientManagePayload {
@@ -11,6 +13,8 @@ export interface IngredientManagePayload {
     packagePrice: number;
     packageSize: number;
   };
+  itemType?: "raw" | "prepped" | "direct";
+  batchRecipe?: BatchRecipeIngredient[];
   isActive?: boolean;
 }
 
@@ -21,3 +25,6 @@ export interface IngredientsManageRequest {
   ingredientId?: string;
   data?: IngredientManagePayload;
 }
+
+// Alias to prevent singular vs plural import errors across middleware/services
+export type IngredientManageRequest = IngredientsManageRequest;

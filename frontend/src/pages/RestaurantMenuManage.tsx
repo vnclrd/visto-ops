@@ -74,7 +74,10 @@ export const RestaurantMenuManagePage: React.FC<RestaurantMenuManageProps> = ({
         fetchCatalog(account.id, store.id),
       ]);
 
-      const activeIngredients = ingredients.filter((i) => i.isActive !== false);
+      // Exclude raw pricing basis materials; only show prepped batches and direct stock
+      const activeIngredients = ingredients.filter(
+        (i) => i.isActive !== false && i.itemType !== 'raw',
+      );
       setAvailableIngredients(activeIngredients);
       setMenuItems(catalog);
 

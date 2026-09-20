@@ -4,7 +4,7 @@ export interface StoreItem {
   location?: string;
   isActive?: boolean;
   createdAt?: string;
-  businessType?: "cafe" | "restaurant" | "retail" | "service" | string;
+  businessType?: 'cafe' | 'restaurant' | 'retail' | 'service' | string;
 }
 
 export interface ClientAccount {
@@ -12,7 +12,7 @@ export interface ClientAccount {
   name: string;
   email: string;
   owner?: string;
-  businessType?: "cafe" | "restaurant" | "retail" | "service" | string;
+  businessType?: 'cafe' | 'restaurant' | 'retail' | 'service' | string;
   stores: StoreItem[];
 }
 
@@ -31,41 +31,24 @@ export interface CartItem {
   category: string;
   price: number;
   basePrice: number;
-  temperature: "hot" | "iced";
-  size: "regular" | "upsized";
+  temperature: 'hot' | 'iced';
+  size: 'regular' | 'upsized';
   upcharge: number;
   quantity: number;
 }
 
-export interface LoginPayload { // visto-accountLogin
+export interface LoginPayload {
   email: string;
   password: string;
 }
 
-export interface LoginResponse { // visto-accountLogin
+export interface LoginResponse {
   success: boolean;
   account?: ClientAccount;
   error?: string;
 }
 
-export interface IngredientRecord { // visto-cafe-ingredientGet
-  id: string;
-  name: string;
-  category: "Dairy" | "Beans" | "Syrups" | "Powders" | "Packaging" | string;
-  unit: "ml" | "g" | "pcs" | "shots" | string;
-  currentStock: number;
-  reorderLevel: number;
-  packageSpecs: {
-    packagePrice: number;
-    packageSize: number;
-  };
-  costPerUnit: number;
-  isActive: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export interface RecipeIngredient { // visto-cafe-drinkBuild
+export interface BatchRecipeIngredient {
   ingredientId: string;
   name: string;
   unit: string;
@@ -74,7 +57,35 @@ export interface RecipeIngredient { // visto-cafe-drinkBuild
   totalCost: number;
 }
 
-export interface MenuItemRecord { // visto-cafe-drinkBuild
+export interface IngredientRecord {
+  id: string;
+  name: string;
+  category: string;
+  unit: string;
+  currentStock: number;
+  reorderLevel: number;
+  packageSpecs: {
+    packagePrice: number;
+    packageSize: number;
+  };
+  costPerUnit: number;
+  itemType?: 'raw' | 'prepped' | 'direct';
+  batchRecipe?: BatchRecipeIngredient[];
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface RecipeIngredient {
+  ingredientId: string;
+  name: string;
+  unit: string;
+  amount: number;
+  costPerUnit: number;
+  totalCost: number;
+}
+
+export interface MenuItemRecord {
   id: string;
   name: string;
   category: string;

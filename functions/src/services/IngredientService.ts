@@ -32,17 +32,21 @@ export class IngredientService {
       const packageSize = Number(data.packageSpecs?.packageSize) || 0;
       const costPerUnit = packageSize > 0 ? packagePrice / packageSize : 0;
 
+      const isRaw = data.itemType === 'raw';
+
       const newRecord: Omit<IngredientRecord, 'id'> = {
         name: data.name.trim(),
         category: data.category?.trim() || 'General',
         unit: data.unit.trim(),
-        currentStock: Number(data.currentStock) || 0,
-        reorderLevel: Number(data.reorderLevel) || 0,
+        currentStock: isRaw ? 0 : Number(data.currentStock) || 0,
+        reorderLevel: isRaw ? 0 : Number(data.reorderLevel) || 0,
         packageSpecs: {
           packagePrice,
           packageSize,
         },
         costPerUnit,
+        itemType: data.itemType || 'direct', // <-- Add this
+        batchRecipe: data.batchRecipe || [], // <-- Add this
         isActive: data.isActive !== undefined ? Boolean(data.isActive) : true,
       };
 
@@ -65,7 +69,10 @@ export class IngredientService {
       if (data?.name !== undefined) updates.name = data.name.trim();
       if (data?.category !== undefined) updates.category = data.category.trim();
       if (data?.unit !== undefined) updates.unit = data.unit.trim();
-      if (data?.currentStock !== undefined)
+      if (data?.itemType !== undefined) updates.itemType = data.itemType; // <-- Add this
+      if (data?.batchRecipe !== undefined)
+        updates.batchRecipe = data.batchRecipe; // <-- Add this
+      if (data?.currentStock !== undefined && data.itemType !== 'raw')
         updates.currentStock = Number(data.currentStock);
       if (data?.reorderLevel !== undefined)
         updates.reorderLevel = Number(data.reorderLevel);
