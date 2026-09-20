@@ -27,6 +27,7 @@ export interface IngredientManagePayload {
     packagePrice: number;
     packageSize: number;
   };
+  costPerUnit?: number;
   itemType?: "raw" | "prepped" | "direct";
   batchRecipe?: BatchRecipeIngredient[];
   isActive?: boolean;

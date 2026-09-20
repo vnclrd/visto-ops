@@ -22,7 +22,6 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
 
-  // Tab switch between Prepped/Direct active stock and Raw cost basis items
   const [activeTab, setActiveTab] = useState<'activeStock' | 'rawBasis'>('activeStock');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -114,24 +113,22 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
   const [newPackageSize, setNewPackageSize] = useState('');
   const [newInitialPacks, setNewInitialPacks] = useState('1');
   const [newReorder, setNewReorder] = useState('');
-
-  // Toggle for restaurants: raw cost basis (no stock count) vs direct stock (Eggs, Rice)
   const [trackLiveStock, setTrackLiveStock] = useState<boolean>(false);
-
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Edit / Price Adjustment Modal State
+  // Restock & Price Adjustment Modal State
   const [editingItem, setEditingItem] = useState<IngredientRecord | null>(null);
   const [editPackagePrice, setEditPackagePrice] = useState('');
   const [editPackageSize, setEditPackageSize] = useState('');
+  const [restockPacks, setRestockPacks] = useState('1');
   const [isSavingEdit, setIsSavingEdit] = useState<boolean>(false);
   const [editError, setEditError] = useState<string | null>(null);
 
-  // Batch Prep / Sub-Recipe Modal State
+  // Batch Prep Modal State
   const [showBatchModal, setShowBatchModal] = useState<boolean>(false);
   const [batchItemName, setBatchItemName] = useState<string>('');
-  const [batchCategory, setBatchCategory] = useState<string>('Meat & Poultry');
+  const [batchCategory] = useState<string>('Meat & Poultry');
   const [batchYieldPortions, setBatchYieldPortions] = useState<string>('125');
   const [batchRecipe, setBatchRecipe] = useState<BatchRecipeIngredient[]>([]);
   const [selectedBatchIngId, setSelectedBatchIngId] = useState<string>('');
@@ -154,12 +151,10 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
     loadData();
   }, [account.id, store.id]);
 
-  // Raw basis items: only used for batch costing calculations (no active stock)
   const rawIngredients = ingredients.filter((i) =>
     isRestaurant ? i.itemType === 'raw' : true
   );
 
-  // Active items: prepped batch items or direct supplies that track inventory counts
   const activeStockIngredients = ingredients.filter((i) =>
     isRestaurant ? i.itemType !== 'raw' : true
   );
@@ -170,7 +165,6 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
     }
   }, [ingredients, selectedBatchIngId, rawIngredients]);
 
-  // Live calculation preview
   const parsedPrice = parseFloat(newPackagePrice) || 0;
   const parsedSize = parseFloat(newPackageSize) || 0;
   const previewCostPerUnit = parsedSize > 0 ? parsedPrice / parsedSize : 0;
@@ -188,7 +182,6 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
     setIsSubmitting(true);
 
     try {
-      // In a restaurant: if not live stock, treat as raw static cost basis
       const itemType: 'raw' | 'direct' | undefined = isRestaurant
         ? trackLiveStock
           ? 'direct'
@@ -213,6 +206,7 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
             packagePrice: parsedPrice,
             packageSize: parsedSize,
           },
+          costPerUnit: previewCostPerUnit,
           itemType,
           isActive: true,
         }
@@ -236,20 +230,43 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
     }
   };
 
-  const openPriceEditModal = (item: IngredientRecord) => {
+  const openRestockModal = (item: IngredientRecord) => {
     setEditingItem(item);
     setEditError(null);
     setEditPackagePrice(String(item.packageSpecs?.packagePrice ?? 0));
     setEditPackageSize(String(item.packageSpecs?.packageSize ?? 0));
+    setRestockPacks('1');
   };
 
-  const handleSavePriceChange = async (e: React.FormEvent) => {
+  // Weighted Average Calculation for Restocking Modal
+  const isRawBasisItem = editingItem?.itemType === 'raw';
+  const incomingPacks = parseFloat(restockPacks) || 0;
+  const incomingPkgPrice = parseFloat(editPackagePrice) || 0;
+  const incomingPkgSize = parseFloat(editPackageSize) || 1;
+
+  const currentStockUnits = editingItem?.currentStock || 0;
+  const currentCost = editingItem?.costPerUnit || 0;
+  const currentTotalValue = currentStockUnits * currentCost;
+
+  const addedStockUnits = incomingPacks * incomingPkgSize;
+  const addedTotalValue = incomingPacks * incomingPkgPrice;
+
+  const projectedTotalStock = isRawBasisItem ? 0 : currentStockUnits + addedStockUnits;
+  const projectedBlendedCost = isRawBasisItem
+    ? incomingPkgSize > 0
+      ? incomingPkgPrice / incomingPkgSize
+      : 0
+    : projectedTotalStock > 0
+    ? (currentTotalValue + addedTotalValue) / projectedTotalStock
+    : incomingPkgSize > 0
+    ? incomingPkgPrice / incomingPkgSize
+    : 0;
+
+  const handleSaveRestockAndPrice = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingItem) return;
 
-    const price = parseFloat(editPackagePrice) || 0;
-    const size = parseFloat(editPackageSize) || 0;
-    if (size <= 0) {
+    if (incomingPkgSize <= 0) {
       setEditError('Package size must be greater than 0');
       return;
     }
@@ -258,33 +275,61 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
     setEditError(null);
 
     try {
-      await manageIngredient(account.id, store.id, 'update', editingItem.id, {
-        packageSpecs: {
-          packagePrice: price,
-          packageSize: size,
-        },
-      });
+      if (isRawBasisItem) {
+        // Raw basis: update pricing without changing stock
+        await manageIngredient(account.id, store.id, 'update', editingItem.id, {
+          packageSpecs: {
+            packagePrice: incomingPkgPrice,
+            packageSize: incomingPkgSize,
+          },
+          costPerUnit: projectedBlendedCost,
+        });
 
-      const updatedCostPerUnit = price / size;
+        setIngredients((prev) =>
+          prev.map((item) =>
+            item.id === editingItem.id
+              ? {
+                  ...item,
+                  packageSpecs: {
+                    packagePrice: incomingPkgPrice,
+                    packageSize: incomingPkgSize,
+                  },
+                  costPerUnit: projectedBlendedCost,
+                }
+              : item
+          )
+        );
+      } else {
+        // Active inventory item: update stock and blended weighted cost
+        await manageIngredient(account.id, store.id, 'update', editingItem.id, {
+          currentStock: projectedTotalStock,
+          packageSpecs: {
+            packagePrice: incomingPkgPrice,
+            packageSize: incomingPkgSize,
+          },
+          costPerUnit: projectedBlendedCost,
+        });
 
-      setIngredients((prev) =>
-        prev.map((item) =>
-          item.id === editingItem.id
-            ? {
-                ...item,
-                packageSpecs: {
-                  packagePrice: price,
-                  packageSize: size,
-                },
-                costPerUnit: updatedCostPerUnit,
-              }
-            : item
-        )
-      );
+        setIngredients((prev) =>
+          prev.map((item) =>
+            item.id === editingItem.id
+              ? {
+                  ...item,
+                  currentStock: projectedTotalStock,
+                  packageSpecs: {
+                    packagePrice: incomingPkgPrice,
+                    packageSize: incomingPkgSize,
+                  },
+                  costPerUnit: projectedBlendedCost,
+                }
+              : item
+          )
+        );
+      }
 
       setEditingItem(null);
     } catch (err: any) {
-      setEditError(err.message || 'Failed to update pricing');
+      setEditError(err.message || 'Failed to update stock');
     } finally {
       setIsSavingEdit(false);
     }
@@ -363,6 +408,7 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
             packagePrice: totalBatchCost,
             packageSize: yieldCount,
           },
+          costPerUnit: computedUnitCostPerPortion,
           isActive: true,
         }
       );
@@ -380,7 +426,6 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
     }
   };
 
-  // Determine current active table dataset
   const activeDataset = isRestaurant
     ? activeTab === 'activeStock'
       ? activeStockIngredients
@@ -431,7 +476,6 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
               <p className="text-xs text-neutral-400">{config.cardSubtitle}</p>
             </div>
 
-            {/* Batch Prep Trigger for Restaurants */}
             {isRestaurant && (
               <button
                 type="button"
@@ -454,7 +498,6 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
             )}
 
             <form onSubmit={handleAddIngredient} className="space-y-4">
-              {/* Restaurant Item Behavior Switcher */}
               {isRestaurant && (
                 <div className="p-3 bg-neutral-950 rounded-xl border border-neutral-800 flex items-center justify-between">
                   <div>
@@ -532,7 +575,6 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
                 </div>
               </div>
 
-              {/* Purchasing Specs */}
               <div className="p-3.5 bg-neutral-950 rounded-xl border border-neutral-800/80 space-y-3">
                 <p className="text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
                   Purchasing Price Specs
@@ -573,7 +615,6 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
                 </div>
               </div>
 
-              {/* Stock inputs: hidden when registering raw static cost-basis items */}
               {shouldShowStockInputs && (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -616,7 +657,6 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
 
         {/* Right Column: Inventory Table with Tabs */}
         <div className="lg:col-span-2 space-y-4">
-          {/* Sub-Navigation Tabs for Restaurants */}
           {isRestaurant && (
             <div className="flex gap-2 border-b border-neutral-800 pb-2">
               <button
@@ -726,10 +766,10 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
                       )}
                       <td className="px-5 py-4 text-right">
                         <button
-                          onClick={() => openPriceEditModal(item)}
+                          onClick={() => openRestockModal(item)}
                           className="px-3 py-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 hover:text-emerald-400 border border-neutral-700 rounded text-xs transition"
                         >
-                          Adjust Price
+                          Restock / Cost
                         </button>
                       </td>
                     </tr>
@@ -749,13 +789,17 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
         </div>
       </main>
 
-      {/* Edit Price Modal: Allows modifying packagePrice & packageSize for both Raw and Active items */}
+      {/* Restock & Price Adjustment Modal with Weighted Average Cost */}
       {editingItem && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl">
-            <h3 className="text-base font-bold text-white mb-1">Adjust Pricing</h3>
+          <div className="bg-neutral-900 border border-neutral-800 rounded-2xl max-w-md w-full p-6 shadow-2xl">
+            <h3 className="text-base font-bold text-white mb-1">
+              {isRawBasisItem ? 'Adjust Material Cost' : 'Restock & Adjust Cost'}
+            </h3>
             <p className="text-xs text-neutral-400 mb-4">
-              Update purchasing cost for {editingItem.name}.
+              {isRawBasisItem
+                ? `Update the purchasing price benchmark for ${editingItem.name}.`
+                : `Receive incoming stock for ${editingItem.name}. Unit cost is blended automatically.`}
             </p>
 
             {editError && (
@@ -764,42 +808,79 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
               </div>
             )}
 
-            <form onSubmit={handleSavePriceChange} className="space-y-4">
-              <div>
-                <label className="block text-xs text-neutral-400 mb-1">Package Price (₱)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  required
-                  value={editPackagePrice}
-                  onChange={(e) => setEditPackagePrice(e.target.value)}
-                  className="w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
-                />
+            <form onSubmit={handleSaveRestockAndPrice} className="space-y-4">
+              {!isRawBasisItem && (
+                <div className="p-3 bg-neutral-950 rounded-xl border border-neutral-800 flex justify-between text-xs">
+                  <span className="text-neutral-400">Current Stock:</span>
+                  <span className="font-semibold text-white">
+                    {editingItem.currentStock} {editingItem.unit} @ ₱{editingItem.costPerUnit.toFixed(4)}/ea
+                  </span>
+                </div>
+              )}
+
+              {!isRawBasisItem && (
+                <div>
+                  <label className="block text-xs text-neutral-400 mb-1">
+                    Incoming Quantity (Number of Packs / Deliveries)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    required
+                    value={restockPacks}
+                    onChange={(e) => setRestockPacks(e.target.value)}
+                    className="w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-neutral-400 mb-1">
+                    {isRawBasisItem ? 'New Package Price (₱)' : 'Delivery Price per Pack (₱)'}
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    value={editPackagePrice}
+                    onChange={(e) => setEditPackagePrice(e.target.value)}
+                    className="w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs text-neutral-400 mb-1">
+                    Net Size per Pack ({editingItem.unit})
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    value={editPackageSize}
+                    onChange={(e) => setEditPackageSize(e.target.value)}
+                    className="w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block text-xs text-neutral-400 mb-1">
-                  Package Net Size ({editingItem.unit})
-                </label>
-                <input
-                  type="number"
-                  required
-                  value={editPackageSize}
-                  onChange={(e) => setEditPackageSize(e.target.value)}
-                  className="w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-
-              <div className="p-3 bg-neutral-950 rounded-lg text-xs flex justify-between">
-                <span className="text-neutral-400">New Unit Cost:</span>
-                <span className="text-emerald-400 font-semibold">
-                  ₱
-                  {(
-                    (parseFloat(editPackagePrice) || 0) /
-                    (parseFloat(editPackageSize) || 1)
-                  ).toFixed(4)}{' '}
-                  / {editingItem.unit}
-                </span>
+              {/* Live Preview of Weighted Average Result */}
+              <div className="p-3 bg-neutral-950 rounded-xl border border-neutral-800 space-y-1 text-xs">
+                {!isRawBasisItem && (
+                  <div className="flex justify-between">
+                    <span className="text-neutral-400">New Total Stock:</span>
+                    <span className="font-semibold text-white">
+                      {projectedTotalStock} {editingItem.unit}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center pt-1 border-t border-neutral-800/80">
+                  <span className="text-neutral-400">
+                    {isRawBasisItem ? 'New Unit Cost:' : 'New Blended Cost (WAC):'}
+                  </span>
+                  <span className="text-emerald-400 font-bold">
+                    ₱{projectedBlendedCost.toFixed(4)} / {editingItem.unit}
+                  </span>
+                </div>
               </div>
 
               <div className="flex gap-2 pt-2">
@@ -815,7 +896,7 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
                   disabled={isSavingEdit}
                   className="w-1/2 py-2 text-xs bg-emerald-500 hover:bg-emerald-400 rounded-lg text-black font-semibold transition disabled:opacity-50"
                 >
-                  {isSavingEdit ? 'Saving...' : 'Save Changes'}
+                  {isSavingEdit ? 'Saving...' : isRawBasisItem ? 'Save Cost' : 'Confirm Restock'}
                 </button>
               </div>
             </form>
@@ -823,7 +904,7 @@ export const ManageIngredientsPage: React.FC<ManageIngredientsProps> = ({
         </div>
       )}
 
-      {/* Batch Prep Modal: Only pulls from rawIngredients */}
+      {/* Batch Prep Modal */}
       {showBatchModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-neutral-900 border border-neutral-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl flex flex-col max-h-[90vh]">

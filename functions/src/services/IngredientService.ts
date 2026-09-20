@@ -69,21 +69,33 @@ export class IngredientService {
       if (data?.name !== undefined) updates.name = data.name.trim();
       if (data?.category !== undefined) updates.category = data.category.trim();
       if (data?.unit !== undefined) updates.unit = data.unit.trim();
-      if (data?.itemType !== undefined) updates.itemType = data.itemType; // <-- Add this
+      if (data?.itemType !== undefined) updates.itemType = data.itemType;
       if (data?.batchRecipe !== undefined)
-        updates.batchRecipe = data.batchRecipe; // <-- Add this
-      if (data?.currentStock !== undefined && data.itemType !== 'raw')
+        updates.batchRecipe = data.batchRecipe;
+      if (data?.currentStock !== undefined && data.itemType !== 'raw') {
         updates.currentStock = Number(data.currentStock);
-      if (data?.reorderLevel !== undefined)
+      }
+      if (data?.reorderLevel !== undefined) {
         updates.reorderLevel = Number(data.reorderLevel);
-      if (data?.isActive !== undefined)
+      }
+      if (data?.isActive !== undefined) {
         updates.isActive = Boolean(data.isActive);
+      }
 
       if (data?.packageSpecs) {
         const packagePrice = Number(data.packageSpecs.packagePrice) || 0;
-        const packageSize = Number(data.packageSpecs.packageSize) || 0;
+        const packageSize = Number(data.packageSpecs.packageSize) || 1;
         updates.packageSpecs = { packagePrice, packageSize };
-        updates.costPerUnit = packageSize > 0 ? packagePrice / packageSize : 0;
+
+        // If frontend passes a calculated blended costPerUnit, use it; otherwise fallback to simple price/size
+        if (data?.costPerUnit !== undefined) {
+          updates.costPerUnit = Number(data.costPerUnit);
+        } else {
+          updates.costPerUnit =
+            packageSize > 0 ? packagePrice / packageSize : 0;
+        }
+      } else if (data?.costPerUnit !== undefined) {
+        updates.costPerUnit = Number(data.costPerUnit);
       }
 
       const updated = await this.repo.updateIngredient(

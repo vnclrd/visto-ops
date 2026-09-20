@@ -13,6 +13,7 @@ export interface IngredientManagePayload {
     packagePrice: number;
     packageSize: number;
   };
+  costPerUnit?: number;
   itemType?: "raw" | "prepped" | "direct";
   batchRecipe?: BatchRecipeIngredient[];
   isActive?: boolean;
@@ -26,5 +27,4 @@ export interface IngredientsManageRequest {
   data?: IngredientManagePayload;
 }
 
-// Alias to prevent singular vs plural import errors across middleware/services
 export type IngredientManageRequest = IngredientsManageRequest;
