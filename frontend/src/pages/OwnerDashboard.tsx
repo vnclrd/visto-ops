@@ -5,6 +5,7 @@ import { DrinkBuildPage } from "./DrinkBuild";
 import { RestaurantMenuManagePage } from "./RestaurantMenuManage";
 import { CatalogManagePage } from "./CatalogManage";
 import { fetchMetrics, type MetricsResult } from "../services/metricApi";
+import { fetchIngredients } from "../services/ingredientApi";
 
 interface OwnerDashboardProps {
   account: ClientAccount;
@@ -29,26 +30,52 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
   const [isLoadingMetrics, setIsLoadingMetrics] = useState<boolean>(true);
   const [metricError, setMetricError] = useState<string | null>(null);
 
+  // Ingredients Count State (for disabling dish manager when empty)
+  const [ingredientsCount, setIngredientsCount] = useState<number>(0);
+  const [isLoadingIngredients, setIsLoadingIngredients] = useState<boolean>(true);
+
   const businessType = store.businessType || account.businessType || "cafe";
   const isCafe = businessType === "cafe";
   const isRestaurant = businessType === "restaurant";
   const usesRecipeBOM = isCafe || isRestaurant;
 
-  const loadStoreMetrics = async () => {
+  const loadStoreData = async () => {
     setIsLoadingMetrics(true);
+    setIsLoadingIngredients(true);
     setMetricError(null);
-    try {
-      const data = await fetchMetrics(account.id, store.id);
-      setMetrics(data);
-    } catch (err: any) {
-      setMetricError(err.message || "Failed to load store metrics");
-    } finally {
-      setIsLoadingMetrics(false);
-    }
+
+    // Run metrics and ingredient checks concurrently
+    await Promise.allSettled([
+      (async () => {
+        try {
+          const data = await fetchMetrics(account.id, store.id);
+          setMetrics(data);
+        } catch (err: any) {
+          setMetricError(err.message || "Failed to load store metrics");
+        } finally {
+          setIsLoadingMetrics(false);
+        }
+      })(),
+      (async () => {
+        if (!usesRecipeBOM) {
+          setIsLoadingIngredients(false);
+          return;
+        }
+        try {
+          const ingList = await fetchIngredients(account.id, store.id);
+          const activeList = ingList.filter((i) => i.isActive !== false);
+          setIngredientsCount(activeList.length);
+        } catch {
+          setIngredientsCount(0);
+        } finally {
+          setIsLoadingIngredients(false);
+        }
+      })(),
+    ]);
   };
 
   useEffect(() => {
-    loadStoreMetrics();
+    loadStoreData();
   }, [account.id, store.id]);
 
   const grossSales = metrics ? metrics.todaySales : (store as any).todaySales || 0;
@@ -62,7 +89,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
         store={store}
         onBack={() => {
           setCurrentView("overview");
-          loadStoreMetrics();
+          loadStoreData(); // Refreshes both metrics and ingredient count upon returning
         }}
       />
     );
@@ -76,7 +103,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
         store={store}
         onBack={() => {
           setCurrentView("overview");
-          loadStoreMetrics();
+          loadStoreData();
         }}
       />
     );
@@ -90,7 +117,7 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
         store={store}
         onBack={() => {
           setCurrentView("overview");
-          loadStoreMetrics();
+          loadStoreData();
         }}
       />
     );
@@ -104,13 +131,16 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
         store={store}
         onBack={() => {
           setCurrentView("overview");
-          loadStoreMetrics();
+          loadStoreData();
         }}
       />
     );
   }
 
-  // Default: Overview Dashboard View
+  // Check if Manage Menu Dishes should be blocked
+  const isMenuDisabled =
+    isRestaurant && !isLoadingIngredients && ingredientsCount === 0;
+
   return (
     <div className="min-h-screen bg-neutral-950 text-white flex flex-col select-none">
       {/* Header */}
@@ -157,11 +187,11 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
           </div>
 
           <button
-            onClick={loadStoreMetrics}
-            disabled={isLoadingMetrics}
-            className="self-start sm:self-auto px-3 py-1.5 rounded bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 text-xs text-neutral-300 transition"
+            onClick={loadStoreData}
+            disabled={isLoadingMetrics || isLoadingIngredients}
+            className="self-start sm:self-auto px-3 py-1.5 rounded bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 text-xs text-neutral-300 transition disabled:opacity-50"
           >
-            {isLoadingMetrics ? "Refreshing..." : "↻ Refresh Data"}
+            {isLoadingMetrics || isLoadingIngredients ? "Refreshing..." : "↻ Refresh Data"}
           </button>
         </div>
 
@@ -236,20 +266,40 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
               </button>
             )}
 
-            {/* Card 2: Distinct Product / Dish Builder */}
+            {/* Card 2: Distinct Product / Dish Builder (Disabled if no ingredients in restaurant) */}
             <button
               onClick={() => {
+                if (isMenuDisabled) return;
                 if (isCafe) setCurrentView("DrinkBuild");
                 else if (isRestaurant) setCurrentView("restaurantMenu");
                 else setCurrentView("catalogManage");
               }}
-              className="p-6 bg-neutral-900/80 hover:bg-neutral-900 border border-neutral-800 hover:border-emerald-500/50 rounded-2xl text-left transition flex items-center justify-between group shadow-lg active:scale-[0.99]"
+              disabled={isMenuDisabled}
+              className={`p-6 bg-neutral-900/80 border rounded-2xl text-left transition flex items-center justify-between group shadow-lg ${
+                isMenuDisabled
+                  ? "opacity-40 border-neutral-800/60 cursor-not-allowed"
+                  : "hover:bg-neutral-900 border-neutral-800 hover:border-emerald-500/50 active:scale-[0.99]"
+              }`}
             >
               <div>
-                <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 font-bold mb-3 border border-emerald-500/20 group-hover:scale-110 transition">
-                  {isCafe ? "☕" : isRestaurant ? "🍽️" : "🏷️"}
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20 group-hover:scale-110 transition">
+                    {isCafe ? "☕" : isRestaurant ? "🍽️" : "🏷️"}
+                  </div>
+                  {isMenuDisabled && (
+                    <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                      Add Kitchen Stock First
+                    </span>
+                  )}
                 </div>
-                <h3 className="text-lg font-semibold text-neutral-100 group-hover:text-emerald-400 transition">
+
+                <h3
+                  className={`text-lg font-semibold transition ${
+                    isMenuDisabled
+                      ? "text-neutral-400"
+                      : "text-neutral-100 group-hover:text-emerald-400"
+                  }`}
+                >
                   {isCafe
                     ? "Manage Drinks"
                     : isRestaurant
@@ -257,16 +307,21 @@ export const OwnerDashboard: React.FC<OwnerDashboardProps> = ({
                     : "Manage Products"}
                 </h3>
                 <p className="text-xs text-neutral-400 mt-1">
-                  {isCafe
+                  {isMenuDisabled
+                    ? "Register kitchen supplies or ingredients first before building dishes."
+                    : isCafe
                     ? "Compose drink recipes, map ingredient deductions, and set terminal pricing."
                     : isRestaurant
                     ? "Create recipes, map raw kitchen deductions, and monitor food cost."
                     : "Add retail inventory items, set prices, and update stock."}
                 </p>
               </div>
-              <span className="text-emerald-400 text-lg opacity-0 group-hover:opacity-100 transition translate-x-[-6px] group-hover:translate-x-0">
-                &rarr;
-              </span>
+
+              {!isMenuDisabled && (
+                <span className="text-emerald-400 text-lg opacity-0 group-hover:opacity-100 transition translate-x-[-6px] group-hover:translate-x-0">
+                  &rarr;
+                </span>
+              )}
             </button>
           </div>
         </div>

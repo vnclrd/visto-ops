@@ -532,7 +532,7 @@ export const RestaurantMenuManagePage: React.FC<RestaurantMenuManageProps> = ({
                     </label>
                     <input
                       type='text'
-                      placeholder='e.g. USDA Ribeye Steak 250g, Carbonara'
+                      placeholder='e.g. Tapsilog, Tocilog, etc.'
                       value={dishName}
                       onChange={(e) => setDishName(e.target.value)}
                       className='w-full rounded-lg bg-neutral-950 border border-neutral-800 px-3.5 py-2 text-sm text-white focus:outline-none focus:border-emerald-500'
@@ -565,7 +565,7 @@ export const RestaurantMenuManagePage: React.FC<RestaurantMenuManageProps> = ({
                   <input
                     type='number'
                     step='1'
-                    placeholder='280'
+                    placeholder='120'
                     value={sellingPrice}
                     onChange={(e) => setSellingPrice(e.target.value)}
                     className='w-full sm:w-1/2 rounded-lg bg-neutral-950 border border-neutral-800 px-3.5 py-2 text-sm text-white focus:outline-none focus:border-emerald-500'
